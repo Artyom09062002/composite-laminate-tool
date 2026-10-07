@@ -1,0 +1,63 @@
+{
+  "tabs": [
+    {
+      "tab": "Start here",
+      "errors": 0,
+      "text_length": 758
+    },
+    {
+      "tab": "1 \u00c2\u00b7 Material & Q",
+      "errors": 0,
+      "text_length": 1274
+    },
+    {
+      "tab": "2 \u00c2\u00b7 Layup & Q\u00cc\u201e",
+      "errors": 0,
+      "text_length": 1310
+    },
+    {
+      "tab": "3 \u00c2\u00b7 ABD",
+      "errors": 0,
+      "text_length": 1792
+    },
+    {
+      "tab": "4 \u00c2\u00b7 Response",
+      "errors": 0,
+      "text_length": 1214
+    },
+    {
+      "tab": "5 \u00c2\u00b7 Failure",
+      "errors": 0,
+      "text_length": 4016
+    },
+    {
+      "tab": "Compare",
+      "errors": 0,
+      "text_length": 865
+    },
+    {
+      "tab": "Pressure vessel",
+      "errors": 0,
+      "text_length": 8942
+    },
+    {
+      "tab": "Manufacturing",
+      "errors": 0,
+      "text_length": 784
+    },
+    {
+      "tab": "Applications",
+      "errors": 0,
+      "text_length": 529
+    },
+    {
+      "tab": "Verification",
+      "errors": 0,
+      "text_length": 1686
+    }
+  ],
+  "pdf_download": "composite_screening_report.pdf",
+  "pdf_pages": 1,
+  "pdf_text_matches_local": true,
+  "verified_code_commit": "b21ae0130e8bbe3a7fe17079eac5e4f0e934ab6a"
+}
