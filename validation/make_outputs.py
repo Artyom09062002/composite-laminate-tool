@@ -42,7 +42,7 @@ def chart(path: Path) -> None:
             continue
         values = list(row["netting_bar"].values())
         ax.plot([row["measured_burst_bar"]] * 2, [min(values), max(values)], color=COLORS["netting"], lw=1.4, marker="_", ms=7, zorder=2)
-    ax.annotate("Kangal (steel liner): dots = glass COPV,\ncomposite wall only, liner not modelled;\nbars = hybrid bounds (hoop plies all glass\nto all carbon, stack order unsourced)", (880, 330),
+    ax.annotate("Kangal (steel liner): dots = glass COPV,\ncomposite wall only, liner not modelled;\nbars = two hoop-material assignments:\nall glass / all carbon, order unsourced", (880, 330),
                 (60, 520), fontsize=7.5, color="#173042", arrowprops=dict(arrowstyle="-", color="#8a9aa5", lw=0.8))
     ax.annotate("Kartav (Al liner): bar from R = 153 mm\n(low end) to R = 76.5 mm (high end)", (1415, 420), (1000, 120), fontsize=7.5,
                 color="#173042", arrowprops=dict(arrowstyle="-", color="#8a9aa5", lw=0.8))
@@ -77,9 +77,9 @@ def tables() -> str:
     for spec in ("HY_P1", "HY_P2"):
         lo, hi = runs[spec][0], runs[spec][1]
         rng = lambda k: f"{fmt(lo['predicted'][k])} to {fmt(hi['predicted'][k])}"
-        lines.append(f"| {spec} (bounds) | {lo['measured_burst_bar']} | {lo['paper_fe_bar']} | {rng('first_ply_clt_bar')} | {rng('first_ply_hashin_bar')} | {rng('last_ply_bar')} | "
+        lines.append(f"| {spec} (two assignments) | {lo['measured_burst_bar']} | {lo['paper_fe_bar']} | {rng('first_ply_clt_bar')} | {rng('first_ply_hashin_bar')} | {rng('last_ply_bar')} | "
                      f"{rng('netting_bar')} | {lo['predicted']['netting_over_measured']:.2f} to {hi['predicted']['netting_over_measured']:.2f} | n/a | n/a |")
-    lines += ["", "Hybrid rows are bounds (all hoop plies glass, all hoop plies carbon) because the 12-ply hybrid stack order is UNSOURCED; they are not predictions.", "",
+    lines += ["", "Hybrid rows show two assumed assignments (all hoop plies glass or all hoop plies carbon). Stack order is UNSOURCED; these scenarios do not prove global bounds and are not vessel predictions.", "",
               "**Table 2. SENSITIVITY (not predictions): GF_P1, one change at a time (bar).**", "",
               "| Change from the primary run | CLT first-ply | Hashin first-ply | Last-ply (model stop) | Netting |", "|---|---|---|---|---|"]
     for run in runs["GF_P1"]:

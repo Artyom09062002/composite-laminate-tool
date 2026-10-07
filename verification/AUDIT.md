@@ -2,7 +2,31 @@
 
 The code was written with AI coding assistants. An AI-written change was accepted only after it was checked against the hand-derived equations, limiting cases, a published worked example and automated tests. This file records what those checks found and what was changed.
 
-## Confirmed
+## v4 refinement audit - 7 October 2026
+
+Baseline: R0 commit `116a072`. User scope: complete the AI/application stages of PLAN_v4_refine_no_new_features; personal A1-A5 are excluded. Optional R6 needs the supplied original article pages and was deferred without filling any source gap.
+
+| Stage / requirement | Current evidence and disposition |
+|---|---|
+| R0 numeric protection | tests/snapshot_v3.json retained byte-for-byte; snapshot regression passes. No core/, material record, validation result or dependency change. |
+| R0b independent review | REVIEW_thermal_optimise.md: eleven numbered findings, derivations and independent numerical probes; no confirmed equation defect, no snapshot update. |
+| R1 clarity | CLARITY_R1.md reviews all eleven tabs and drafts the requested explanations and glossary. Accepted scope, axis, microstrain, model-stop, thermal and validation clarifications are in existing screens. |
+| R2 style / honesty | ui_theme.py centralises CSS, palette and fifteen terms. Three status badges, actual unscored-validation text and a collapsible limits panel are visible. No navigation mode or tab was added. |
+| R3 existing charts | presentation.py uses solver curve arrays and pre-damage event states, with consistent mode colours in charts and tables. Dome opening and shaded station cells use existing radius and membrane_valid arrays. Unused legend modes are omitted to avoid clipping. |
+| R4 existing export | report.py remains the exporter. Mechanical summary and cylinder case are separated; first-ply, model stop, netting, curve, assumptions, version/date/recorded tests are included. Tests prove one page at 4/16/40 plies and exact displayed pressure values. Final sample and all three Report No. 2 pages visually inspected. |
+| R5 input handling | ROBUSTNESS_R5.md and eight focused regressions: malformed material cells, extreme angles, nonfinite/zero thickness, mm-to-m underflow and invalid counts. Existing guards cover empty/over-100 editor stacks, one ply, zero working pressure and unavailable custom CTE. Dome UI restricts r0/R to 0.05-0.95; core tests reject r0 >= R. |
+| G2 / R7 text disposition | TEXT_REVIEW_G2.md: #1,2,4,10,11 confirmed and corrected. #3 partly confirmed: the displayed hybrid scenarios are specifically two hoop-material assignments, not a proven bound over every order. #5-9 rejected as defects because the current badges, validation, stop, thermal scope and reference wording already state the limitations. |
+| Full suite | 161 passed, 0 skipped; qa_results.json, qa_test_log.txt; reproducible with python verification/run_refine_qa.py. Includes every material/load/layup preset with all eleven tabs rendered, cached-core export regression, snapshot and report checks. |
+| Browser / download | local_browser_qa.json records eleven actual tab clicks and a downloaded cylinder PDF. README screenshot uses the existing pressure-strain chart. Live baseline was inspected and still showed ImportError; post-deployment check remains a release gate. |
+| Cleanup / boundaries | Four old untracked PDF/PNG variants preserved under ignored _local/old_files/r0_preserved. pytest.ini restricts discovery to current tests; .gitattributes treats PDF/PNG as binary. No original test was removed. |
+
+R1 draft corrections: do not globally say Hashin never controls first-ply (the vessel reports its own Hashin initiation); apply that distinction only to the laminate summary. Manufacturing content is labelled background, rather than claimed as a computed process recommendation. Larger first-ply factors, netting ratios and implied radii are not presented as design safety factors or experimental validation.
+
+Import fix: app imports new thermal names directly from core.thermal. A regression removes those aggregate names from an already-cached core package and verifies app rendering. This reproduces the suspected stale-package condition; it does not claim access to redacted cloud logs. Mechanics are unchanged.
+
+Deferred: R6 original-page extraction; personal A1-A5; temperature-dependent properties, liner/boss load sharing, certified allowables, physical burst/ultimate prediction and stability remain outside the model. No experimental validation pass is claimed.
+
+## Earlier verified mechanics
 
 - `Q̄(0°) = Q`; the 30° glass/epoxy `Q̄` agrees with the closed-form transformation (`verification/benchmark.py`).
 - Ply interfaces run from `−h/2` to `+h/2`; stresses are recovered at both faces of every ply from `ε(z) = ε⁰ + zκ`.

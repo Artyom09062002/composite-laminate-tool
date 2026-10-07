@@ -11,7 +11,7 @@ input to show how much it matters; they are never the prediction.
 1. **The inner radius is NOT REPORTED in any of the four sources**, and pressure scales as 1/R. For Alam (the only case without a metal liner) no pressure can be given, only p·R and the radius at which the prediction would equal the measurement (Table 3). That radius, 45–52 mm, must be compared with Figures 1–3 of the paper by a human.
 2. **The two Type III cases have a metal liner** (34CrMo4 steel; Al 6061-T6) whose properties are UNSOURCED and which the model does not contain. The model gives the capacity of the composite wall alone, so its prediction is far below the measured total (Kangal glass: netting 0.26 of the measured burst, Table 1). That is expected, not a model error, and not a validation either.
 3. **The one plausibility check available** is the measured gain over the bare liner: Kangal glass COPV 919/879 bar minus the mean bare liner 657 bar = 262/222 bar, against a netting estimate of 242/232 bar (ratios 0.92 and 1.05). This is NOT agreement: the steel liner yields, the liner and the composite do not share the load additively, and the bare-liner tests alone scatter by 622–692 bar (±35 bar, about ±15 % of the gain).
-4. **The Kartav radius is inconsistent as published.** With R = 153 mm the fibre-only estimate is 29–32 % of the measured burst of the configurations that failed in the cylinder; reading 153 mm as a diameter (R = 76.5 mm) gives 58–64 %. Neither reading is checked against Figure 1.
+4. **The Kartav geometry interpretation remains unverified.** With the transcribed R = 153 mm the composite-only fibre estimate is 29–32 % of measured total burst for cylinder failures; reading 153 mm as a diameter gives 58–64 %. The omitted liner and unverified Figure 1 prevent diagnosing an error in the published geometry from this mismatch.
 
 ## What the numbers do show (about the model, not about the vessels)
 
@@ -44,10 +44,10 @@ Table 1 of the paper labels its diameters only "average". (COPV diameter − lin
 |---|---|---|---|---|---|---|---|---|---|
 | GF_P1 | 919 | 953 | 18.9 | 18.9 | 167.8 | 242.3 | 0.26 | 262 | 0.92 |
 | GF_P2 | 879 | 953 | 18.1 | 18.1 | 160.7 | 232.1 | 0.26 | 222 | 1.05 |
-| HY_P1 (bounds) | 922 | 943 | 22.7 to 46.7 | 22.7 to 46.7 | 201.6 to 341.9 | 291.2 to 484.6 | 0.32 to 0.53 | n/a | n/a |
-| HY_P2 (bounds) | 887 | 943 | 19.8 to 40.6 | 19.7 to 40.6 | 175.2 to 297.1 | 253.1 to 421.1 | 0.29 to 0.47 | n/a | n/a |
+| HY_P1 (two assignments) | 922 | 943 | 22.7 to 46.7 | 22.7 to 46.7 | 201.6 to 341.9 | 291.2 to 484.6 | 0.32 to 0.53 | n/a | n/a |
+| HY_P2 (two assignments) | 887 | 943 | 19.8 to 40.6 | 19.7 to 40.6 | 175.2 to 297.1 | 253.1 to 421.1 | 0.29 to 0.47 | n/a | n/a |
 
-Hybrid rows are bounds (all hoop plies glass, all hoop plies carbon) because the 12-ply hybrid stack order is UNSOURCED; they are not predictions.
+Hybrid rows show two assumed assignments (all hoop plies glass or all hoop plies carbon). Stack order is UNSOURCED; these scenarios do not prove global bounds and are not vessel predictions.
 
 **Table 2. SENSITIVITY (not predictions): GF_P1, one change at a time (bar).**
 

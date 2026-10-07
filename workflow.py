@@ -39,7 +39,7 @@ def parse_layup(text: str, thickness_m: float) -> list[dict]:
         angles += list(reversed(angles))
     if len(angles) > 100:
         raise ValueError("Use at most 100 plies in the interactive tool")
-    return [{"theta": angle, "t": thickness_m, "mat": 0} for angle in angles]
+    return [{"theta": _input_angle(angle), "t": thickness_m, "mat": 0} for angle in angles]
 
 
 def editor_to_layup(rows, material_names: list[str] | None = None) -> list[dict]:
@@ -50,6 +50,8 @@ def editor_to_layup(rows, material_names: list[str] | None = None) -> list[dict]
     """
     if not 1 <= len(rows) <= 100:
         raise ValueError("The layup must contain between 1 and 100 plies")
+    if material_names is not None and not material_names:
+        raise ValueError("Select at least one material")
     result = []
     for index, row in enumerate(rows, start=1):
         try:
@@ -61,16 +63,32 @@ def editor_to_layup(rows, material_names: list[str] | None = None) -> list[dict]
             raise ValueError(f"Ply {index}: angle must be finite and thickness positive")
         mat = 0
         name = row.get("Material") if material_names is not None else None
-        if isinstance(name, str) and name:
-            if name not in material_names:
-                raise ValueError(f"Ply {index}: unknown material '{name}'")
-            mat = material_names.index(name)
-        result.append({"theta": angle, "t": thickness_mm * 1e-3, "mat": mat})
+        # Missing cells from the editor retain the documented first-material default.
+        if isinstance(name, str):
+            name = name.strip()
+            if name:
+                if name not in material_names:
+                    raise ValueError(f"Ply {index}: unknown material '{name}'")
+                mat = material_names.index(name)
+        elif name is not None and not (isinstance(name, (float, np.floating)) and math.isnan(name)):
+            raise ValueError(f"Ply {index}: select a material by name")
+        thickness_m = thickness_mm * 1e-3
+        if thickness_m <= 0:
+            raise ValueError(f"Ply {index}: thickness is too small to represent in metres")
+        result.append({"theta": _input_angle(angle), "t": thickness_m, "mat": mat})
     return result
 
 
+def _input_angle(angle: float) -> float:
+    """Reduce extreme UI angles before trigonometry; preserve ordinary input labels."""
+    return _canonical(angle) if abs(angle) > 360.0 else angle
+
+
 def _canonical(angle: float) -> float:
-    normalized = ((float(angle) + 90.0) % 180.0) - 90.0
+    # Reduce first: adding 90 before modulo loses that offset for huge finite values.
+    normalized = float(angle) % 180.0
+    if normalized >= 90.0:
+        normalized -= 180.0
     return 0.0 if abs(normalized) < 1e-10 else normalized
 
 
@@ -172,7 +190,12 @@ def screen_cylinder(layup: list[dict], materials: list[dict], strengths, radius_
 
 def angle_ply_wall(theta: float, plies: int, thickness_m: float, mat: int = 0) -> list[dict]:
     """Balanced symmetric +/-theta wall with ``plies`` plies (a multiple of 4)."""
-    if plies < 4 or plies % 4:
+    if isinstance(plies, bool) or not isinstance(plies, (int, np.integer)) or plies < 4 or plies % 4:
         raise ValueError("Use a multiple of 4 plies for a balanced symmetric +/-theta wall")
+    if not math.isfinite(theta):
+        raise ValueError("Ply angle must be finite")
+    if not math.isfinite(thickness_m) or thickness_m <= 0:
+        raise ValueError("Ply thickness must be positive and finite")
+    theta = _input_angle(theta)
     half = [theta, -theta] * (plies // 4)
     return [{"theta": float(a), "t": thickness_m, "mat": mat} for a in half + half[::-1]]

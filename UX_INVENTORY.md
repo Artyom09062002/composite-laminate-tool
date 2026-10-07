@@ -1,5 +1,7 @@
 # UX_INVENTORY: what each tab shows and what a first-time viewer will not understand
 
+Historical R0 inventory. Current refinements and dispositions are recorded in verification/CLARITY_R1.md and verification/AUDIT.md; this baseline is preserved as evidence of the original gaps.
+
 Source: read from `app.py` (R0, 7 Oct 2026), not from a screenshot walk-through. "Gap" means a term, number or choice
 that a first-time viewer (a composites professor or an engineer who has not used the tool) cannot decode from the screen alone.
 Nothing here has been changed in the app; this is an inventory for the next UX task.

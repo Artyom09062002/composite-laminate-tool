@@ -45,12 +45,12 @@ def main() -> None:
         "<b>Hashin criterion</b> (plane stress, four modes, active mode, strength ratio) reported next to Maximum Stress and Tsai-Wu.",
         "<b>Progressive failure:</b> load factor from first-ply to the last-ply stopping point, failure sequence, ABD rebuilt after every failure, load-strain curve.",
         "<b>Pressure vessel tab:</b> CLT first-ply, Hashin first-ply, last-ply and the netting estimate side by side, with editable degradation factors.",
-        "<b>Review corrections</b> (Section 4) and a validation harness (<font name='%s'>validation/</font>). Automated tests: 43 in v2, 120 now, all passing." % regular):
+        "<b>Review corrections</b> (Section 4) and a validation harness (<font name='%s'>validation/</font>). Historical baselines: 43 tests in v2, 120 at C4. Current refinement checks are recorded in verification/AUDIT.md." % regular):
         story.append(Paragraph(text, bullet, bulletText="•"))
     story += [
         Paragraph("3. Method summary", st["h"]),
         Paragraph("<b>Vessel wall.</b> A closed thin cylinder of radius R under pressure p carries N<sub>x</sub> = pR/2 and N<sub>y</sub> = pR. Netting theory (fibres only) balances both "
-                  "at the winding angle tan<super>2</super>θ = 2, θ = 54.74°; the app solves the fibre-only equilibrium exactly for any layup. CLT first-ply uses Maximum Stress and Tsai-Wu.", st["body"]),
+                  "at the winding angle tan<super>2</super>θ = 2, θ = 54.74°; the app solves axial and hoop fibre-only equilibrium, without strain compatibility or shear equilibrium. CLT first-ply uses Maximum Stress and Tsai-Wu.", st["body"]),
         Spacer(1, 3),
         Paragraph("<b>Hashin initiation</b> (plane-stress, Hashin-1980-inspired; σ<sub>3</sub>, τ<sub>13</sub>, τ<sub>23</sub> are not assessed). Fibre tension: (σ<sub>1</sub>/X<sub>t</sub>)<super>2</super> + α(τ<sub>12</sub>/S)<super>2</super>, α = 1; "
                   "fibre compression: (σ<sub>1</sub>/X<sub>c</sub>)<super>2</super>; matrix tension: (σ<sub>2</sub>/Y<sub>t</sub>)<super>2</super> + (τ<sub>12</sub>/S)<super>2</super>; matrix compression: "
@@ -97,41 +97,41 @@ def main() -> None:
                      "composite wall only; steel liner not modelled"])
     for name, lo, hi in (("Kangal hybrid P1", h1lo, h1hi), ("Kangal hybrid P2", h2lo, h2hi)):
         rng = lambda k: f"{lo['predicted'][k]:.0f}–{hi['predicted'][k]:.0f}"
-        rows.append([name, str(lo["measured_burst_bar"]), rng("first_ply_clt_bar"), rng("first_ply_hashin_bar"), rng("last_ply_bar"), rng("netting_bar"), "bounds: stack order unsourced"])
+        rows.append([name, str(lo["measured_burst_bar"]), rng("first_ply_clt_bar"), rng("first_ply_hashin_bar"), rng("last_ply_bar"), rng("netting_bar"), "two material assignments; stack order unsourced"])
     rows.append(["Alam T800S (p·R, kN/m)", f"{CASES['ALAM_2020']['measured_mean_burst_psi'] * 6894.757e-5:.0f} (mean of 3)", f(a["first_ply_clt"] / 1e3), f(a["first_ply_hashin"] / 1e3),
                  f(a["last_ply"] / 1e3), f(a["netting"] / 1e3), f"radius unsourced; equals measured at R = {imp['first_ply_clt']:.0f}–{imp['last_ply']:.0f} mm"])
     rows.append(["Kartav ALCF10–13 (netting)", f"{min(r['measured_burst_bar'] for r in ka)}–{max(r['measured_burst_bar'] for r in ka)}", "n/a", "n/a", "n/a",
                  f"{min(list(r['netting_bar'].values())[0] for r in ka):.0f}–{max(list(r['netting_bar'].values())[0] for r in ka):.0f} (R = 153 mm); "
                  f"{min(list(r['netting_bar'].values())[1] for r in ka):.0f}–{max(list(r['netting_bar'].values())[1] for r in ka):.0f} (R = 76.5 mm)", "radius ambiguous; Al liner; order unsourced"])
-    story.append(Paragraph("Four published cases (three usable here) were assembled with an AI research assistant and are <b>unverified</b>. No source reports the inner radius, and the two Type III vessels have a metal liner "
+    story.append(Paragraph("Four research cases (three conditional, none usable for a like-for-like comparison) were assembled with an AI research assistant and are <b>unverified</b>. The supplied text does not explicitly report the inner radius, and the two Type III vessels have a metal liner "
                            "the model does not contain. Pressures in bar unless stated. No parameter was tuned to any measurement.", st["body"]))
     story.append(Spacer(1, 3))
-    story.append(_table([[P(c, cell) if i else c for c in row] if i else row for i, row in enumerate(rows)], [30 * mm, 21 * mm, 16 * mm, 16 * mm, 16 * mm, 30 * mm, 45 * mm], regular, bold, align_right_from=9))
+    story.append(_table([[P(c, cell) if i else c for c in row] if i else row for i, row in enumerate(rows)], [30 * mm, 21 * mm, 16 * mm, 16 * mm, 22 * mm, 30 * mm, 39 * mm], regular, bold, align_right_from=9))
     story.append(Spacer(1, 4))
     chart = Image(str(ROOT / "validation" / "predicted_vs_measured.png"), width=112 * mm, height=112 * mm * 4.6 / 6.4)
     story.append(KeepTogether([chart]))
     gain1 = k1["diagnostic_gain_over_bare_liner_bar"]["using_mean_liner_657"]
     gain2 = k2["diagnostic_gain_over_bare_liner_bar"]["using_mean_liner_657"]
     story += [
-        Paragraph("<b>Reading.</b> The comparison cannot confirm or reject the model. (i) The composite-only netting estimate is 0.26 of the measured total for the Kangal glass vessels, as expected without the liner. "
+        Paragraph("<b>Reading.</b> The comparison cannot confirm or reject the model. (i) The composite-only netting estimate is 0.26 of the measured total for the Kangal glass vessels; omitted liner load sharing prevents a like-for-like interpretation. "
                   f"(ii) The measured gain over the bare steel liner (mean 657 bar) is {gain1} and {gain2} bar against netting 242 and 232 bar (ratios {k1['diagnostic_netting_over_gain_mean_liner']:.2f} and {k2['diagnostic_netting_over_gain_mean_liner']:.2f}); "
                   "this is a plausibility check only, since a yielding liner does not share load additively and the bare liners themselves scatter by 622–692 bar. "
                   f"(iii) First-ply is {k1['predicted']['first_ply_hashin_bar']:.0f} bar, about 2 % of burst: matrix cracking, not burst. "
                   "(iv) The last-ply value moves from 64 to 243 bar with the unsourced stack order of the same 12 plies and by a factor of 3.5 over the residual factors, while netting stays at 242 bar. "
-                  "(v) For Alam the model matches the measured burst only if R is 45–52 mm, to be compared with the paper's figures. "
-                  "(vi) Kartav's published radius (153 mm) gives only 29–32 % of the measured burst even for the cylinder failures, i.e. it is inconsistent with the burst values; this cannot be resolved without the paper's Figure 1.", st["body"]),
+                  "(v) For Alam the separate calculated thresholds equal measured mean pressure at implied radii 45–52 mm. The radius is not reported in the supplied text, so this coincidence cannot be scored as validation. "
+                  "(vi) Using Kartav's transcribed radius (153 mm), the composite-only netting estimate is 29–32 % of the measured total burst. This mismatch does not establish an error in the paper: liner load sharing is omitted and the geometry interpretation needs Figure 1.", st["body"]),
         Paragraph("<b>Likely causes of the gaps:</b> liner not modelled; dome and end effects; fibre-to-ply strength translation (netting uses the ply X<sub>t</sub>); unsourced radius, dome and stack order; "
                   "free-plate CLT for unsymmetric walls; test scatter (919 vs 879 bar for one design, 6 % between identical Kartav configurations).", st["body"]),
         Paragraph("6. Limits", st["h"]),
         Paragraph("Not modelled: liner and boss, dome progressive failure, interlaminar stresses and delamination, thermal and cure stresses, moisture and temperature, fatigue, impact, holes and concentrators, "
                   "manufacturing defects, fibre kinking, crack growth, leakage and stability of the softening path. Strengths are literature values, not qualified allowables. "
-                  "Results are valid only for a real ply-by-ply discretisation; there is no fracture-energy regularisation.", st["body"]),
+                  "Use physical ply layers; there is no fracture-energy regularisation, so discretisation-independent softening is not established.", st["body"]),
         Paragraph("7. Next steps", st["h"]),
     ]
     for text in ("Read the radius, polar opening and dome from the paper figures (Alam, Kangal, Kartav) and re-run <font name='%s'>validation/run_validation.py</font>." % regular,
                  "Prefer a Type IV case with a published burst value (Lüders 2025: extract the burst event from the public CSV) so that the liner does not dominate.",
                  "Add the liner as a simple load-sharing element only when its properties are sourced.",
-                 "Thermal residual stresses (cure and cryogenic), then layup optimisation as a labelled screening tool.",
+                 "Thermal residual stresses and labelled cylinder layup screening were added after this C4 comparison; their verification is recorded separately.",
                  "Repeat the stack-order test with a shell-restrained wall instead of free-plate CLT."):
         story.append(Paragraph(text, bullet, bulletText="•"))
     story += [

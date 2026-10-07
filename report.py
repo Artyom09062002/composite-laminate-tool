@@ -1,203 +1,194 @@
-"""PDF report of the current analysis (inputs, ABD, engineering constants, ply results)."""
+"""Compact one-page export of the existing laminate and cylinder analyses."""
 from __future__ import annotations
-
 import io
+import json
 import math
-from datetime import date
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from xml.sax.saxutils import escape
 
+from reportlab.graphics.shapes import Drawing, Line, PolyLine, Circle, String
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from core import evaluate_failure, tsai_wu_load_factor
+from presentation import progressive_frames, validation_status
+from ui_theme import APP_VERSION, PALETTE, MODE_COLOURS
 
-FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
+FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 APP_URL = "https://composite-laminate-tool.streamlit.app/"
-INK, TEAL, GRID, SHADE = colors.HexColor("#173042"), colors.HexColor("#087f8c"), colors.HexColor("#c9d8de"), colors.HexColor("#eef5f7")
+INK, TEAL, GRID, SHADE = [colors.HexColor(PALETTE[k]) for k in ("ink", "teal", "grid", "shade")]
 
 
-def _fonts() -> tuple[str, str]:
+def _fonts():
     try:
         pdfmetrics.registerFont(TTFont("DejaVu", str(FONT_DIR / "DejaVuSans.ttf")))
         pdfmetrics.registerFont(TTFont("DejaVu-Bold", str(FONT_DIR / "DejaVuSans-Bold.ttf")))
         return "DejaVu", "DejaVu-Bold"
-    except Exception:  # fonts missing: fall back to the built-in Helvetica
+    except (OSError, ValueError):
         return "Helvetica", "Helvetica-Bold"
 
 
-def _styles(regular: str, bold: str) -> dict[str, ParagraphStyle]:
-    base = dict(fontName=regular, alignment=TA_LEFT)
-    return {
-        "title": ParagraphStyle("title", fontName=bold, fontSize=17, leading=21, textColor=INK, spaceAfter=2),
-        "meta": ParagraphStyle("meta", **base, fontSize=8.5, leading=11, textColor=colors.HexColor("#5b7080")),
-        "h": ParagraphStyle("h", fontName=bold, fontSize=11.5, leading=15, textColor=TEAL, spaceBefore=9, spaceAfter=4),
-        "body": ParagraphStyle("body", **base, fontSize=9, leading=12.5, textColor=INK),
-        "small": ParagraphStyle("small", **base, fontSize=7.8, leading=10.2, textColor=colors.HexColor("#4a5d6b")),
-        "cell": ParagraphStyle("cell", **base, fontSize=7.8, leading=9.6, textColor=INK),
-    }
+def _fmt(value, digits=4):
+    if value is None or not math.isfinite(value):
+        return "n/a"
+    return "0" if abs(value) < 1e-12 else f"{value:.{digits}g}"
+
+
+def _styles(regular, bold):
+    """Retain the typography API used by the existing historical reports."""
+    styles = {}
+    for key, size, leading in (("title",17,21),("meta",8.5,11),("h",11.5,15),
+                               ("body",9,12.5),("small",7.8,10.2),("cell",7.8,9.6)):
+        styles[key] = ParagraphStyle(key, fontName=bold if key in ("title","h") else regular,
+                                    fontSize=size, leading=leading, textColor=TEAL if key == "h" else INK,
+                                    spaceBefore=9 if key == "h" else 0, spaceAfter=4 if key == "h" else 0)
+    return styles
 
 
 def _table(rows, widths, regular, bold, header=True, align_right_from=1):
-    head = ParagraphStyle("head", fontName=bold, fontSize=7.8, leading=9.6, textColor=INK)
-    rows = [[Paragraph(c, head) if (header and r == 0) else c for c in row] for r, row in enumerate(rows)]
-    table = Table(rows, colWidths=widths, repeatRows=1 if header else 0)
-    style = [
-        ("FONT", (0, 0), (-1, -1), regular, 7.8),
-        ("TEXTCOLOR", (0, 0), (-1, -1), INK),
-        ("GRID", (0, 0), (-1, -1), 0.4, GRID),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 2.2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2.2),
-        ("ALIGN", (align_right_from, 0 if not header else 1), (-1, -1), "RIGHT"),
-    ]
-    if header:
-        style += [("FONT", (0, 0), (-1, 0), bold, 7.8), ("BACKGROUND", (0, 0), (-1, 0), SHADE)]
-    table.setStyle(TableStyle(style))
+    """Compatibility for Report No. 2 and the existing thermal report."""
+    cell = _styles(regular,bold)["cell"]
+    wrapped = [[Paragraph(value,cell) if isinstance(value,str) else value for value in row] for row in rows]
+    table = Table(wrapped,colWidths=widths,repeatRows=1 if header else 0)
+    table.setStyle(TableStyle([("GRID",(0,0),(-1,-1),.4,GRID), ("VALIGN",(0,0),(-1,-1),"TOP"),
+        ("FONT",(0,0),(-1,-1),regular,7.8),("TOPPADDING",(0,0),(-1,-1),2.2),
+        ("BOTTOMPADDING",(0,0),(-1,-1),2.2)] +
+        ([("BACKGROUND",(0,0),(-1,0),SHADE)] if header else [])))
     return table
 
 
-def _fmt(value: float, digits: int = 4) -> str:
-    if value is None or (isinstance(value, float) and not math.isfinite(value)):
-        return "—"
-    if abs(value) < 1e-12:
-        return "0"
-    return f"{value:.{digits}g}"
-
-
-def _fixed(value: float, decimals: int) -> str:
-    """Fixed-point text without a negative zero (-0.00)."""
+def _fixed(value, decimals):
     return f"{round(float(value), decimals) + 0.0:.{decimals}f}"
 
 
-def _small(value: float, scale_floor: float = 1e-12) -> str:
-    """Curvature-type values: round-off below scale_floor is shown as 0."""
+def _small(value, scale_floor=1e-12):
     return "0" if abs(value) < scale_floor else f"{value:.4g}"
 
 
-def _matrix(name: str, matrix, scale: float, unit: str, regular, bold, digits=4):
-    rows = [[f"{name} [{unit}]", "x", "y", "xy"]]
-    for label, row in zip(("x", "y", "xy"), matrix):
-        rows.append([label, *(_fmt(v / scale, digits) for v in row)])
-    return _table(rows, [17 * mm, 13.5 * mm, 13.5 * mm, 13.5 * mm], regular, bold)
+def _recorded_tests():
+    path = Path(__file__).parent / "verification" / "qa_results.json"
+    if path.exists():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return f"Recorded suite: {data['tests_run']} tests, {data['failures']} failures, {data['errors']} errors, {data['skipped']} skipped"
+    return "Recorded R0 baseline: 146 tests; current checks in verification/AUDIT.md"
 
 
-def build_pdf_report(*, material_name: str, material: dict, strengths, layup: list[dict],
-                     material_names: list[str], loads, stiffness, constants, response,
-                     surface_strengths, first_ply: tuple[int, float, str]) -> bytes:
+def pressure_strain_drawing(progressive, font):
+    """The same arrays and pre-damage event coordinates used by the UI."""
+    curve, events = progressive_frames(progressive)
+    drawing = Drawing(500, 190)
+    x0, y0, w, h = 45, 35, 410, 100
+    xmax = max(float(curve.strain.max()), 1e-12)
+    ymax = max(float(curve.pressure.max()), 1e-12)
+    x = lambda v: x0 + w * float(v) / xmax
+    y = lambda v: y0 + h * float(v) / ymax
+    drawing.add(Line(x0, y0, x0+w, y0, strokeColor=GRID))
+    drawing.add(Line(x0, y0, x0, y0+h, strokeColor=GRID))
+    drawing.add(PolyLine([coordinate for row in curve.itertuples() for coordinate in (x(row.strain), y(row.pressure))],
+                         strokeColor=colors.HexColor("#3b6fb6"), strokeWidth=1.7))
+    for row in events.itertuples():
+        drawing.add(Circle(x(row.strain), y(row.pressure), 2.8,
+                           fillColor=colors.HexColor(MODE_COLOURS[row.Mode]), strokeColor=colors.white))
+    for fraction in (0, .5, 1):
+        drawing.add(String(x0+w*fraction, y0-12, f"{xmax*fraction:.3g}", fontName=font, fontSize=7, textAnchor="middle"))
+        drawing.add(String(x0-6, y0+h*fraction, f"{ymax*fraction:.3g}", fontName=font, fontSize=7, textAnchor="end"))
+    drawing.add(String(x0+w/2, 8, "Hoop strain [%]", fontName=font, fontSize=8, textAnchor="middle"))
+    drawing.add(String(3, 150, "Pressure [MPa]", fontName=font, fontSize=8))
+    for i, mode in enumerate(events.Mode.unique()):
+        drawing.add(String(100+(i%2)*220, 175-(i//2)*12, mode,
+                           fillColor=colors.HexColor(MODE_COLOURS[mode]), fontName=font, fontSize=6.5))
+    return drawing
+
+
+def build_pdf_report(*, material_name, material, strengths, layup, material_names, loads,
+                     stiffness, constants, response, surface_strengths, first_ply, vessel=None):
     regular, bold = _fonts()
-    st = _styles(regular, bold)
+    styles = {
+        "title": ParagraphStyle("title", fontName=bold, fontSize=16, leading=20, textColor=INK),
+        "body": ParagraphStyle("body", fontName=regular, fontSize=8, leading=11, textColor=INK),
+        "small": ParagraphStyle("small", fontName=regular, fontSize=7, leading=9, textColor=INK),
+        "h": ParagraphStyle("h", fontName=bold, fontSize=10, leading=13, textColor=TEAL, spaceBefore=7, spaceAfter=3),
+    }
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm,
-                            topMargin=14 * mm, bottomMargin=14 * mm,
-                            title="Laminate analysis report", author="Composite Laminate Design & Analysis Tool")
-    story = [
-        Paragraph("Laminate analysis report", st["title"]),
-        Paragraph(f"Composite Laminate Design &amp; Analysis Tool · {date.today():%d %B %Y} · {APP_URL}", st["meta"]),
-        Paragraph("Classical Lamination Theory, linear-elastic plies in plane stress, first-ply screening. "
-                  "Educational tool, not a certified design calculation.", st["meta"]),
-    ]
-
-    # 1. Inputs
-    story.append(Paragraph("1. Inputs", st["h"]))
-    s = strengths
-    story.append(Paragraph(
-        f"<b>Sidebar material:</b> {material_name}. E<sub>1</sub> = {material['E1'] / 1e9:.4g} GPa, "
-        f"E<sub>2</sub> = {material['E2'] / 1e9:.4g} GPa, G<sub>12</sub> = {material['G12'] / 1e9:.4g} GPa, "
-        f"ν<sub>12</sub> = {material['v12']:.3g}. Strengths: X<sub>t</sub> = {s.Xt / 1e6:.4g}, X<sub>c</sub> = {s.Xc / 1e6:.4g}, "
-        f"Y<sub>t</sub> = {s.Yt / 1e6:.4g}, Y<sub>c</sub> = {s.Yc / 1e6:.4g}, S = {s.S / 1e6:.4g} MPa.", st["body"]))
-    nx, ny, nxy, mx, my, mxy = loads
-    story.append(Spacer(1, 3))
-    story.append(Paragraph(
-        f"<b>Loads per unit width:</b> N<sub>x</sub> = {nx / 1e3:.4g}, N<sub>y</sub> = {ny / 1e3:.4g}, "
-        f"N<sub>xy</sub> = {nxy / 1e3:.4g} kN/m; M<sub>x</sub> = {mx:.4g}, M<sub>y</sub> = {my:.4g}, "
-        f"M<sub>xy</sub> = {mxy:.4g} N·m/m.", st["body"]))
-    story.append(Spacer(1, 4))
-    ply_rows = [["Ply", "Angle [deg]", "Thickness [mm]", "Material", "z bottom [mm]", "z top [mm]"]]
-    for i, ply in enumerate(layup):
-        ply_rows.append([str(i + 1), f"{ply['theta']:g}", f"{ply['t'] * 1e3:.4g}", material_names[ply["mat"]],
-                         f"{stiffness.z[i] * 1e3:.4g}", f"{stiffness.z[i + 1] * 1e3:.4g}"])
-    ply_table = _table(ply_rows, [10 * mm, 22 * mm, 24 * mm, 58 * mm, 28 * mm, 28 * mm], regular, bold)
-    ply_table.setStyle(TableStyle([("ALIGN", (3, 1), (3, -1), "LEFT")]))
-    story.append(Paragraph("Stacking sequence, bottom (−h/2) to top (+h/2):", st["small"]))
-    story.append(ply_table)
-
-    # 2. Stiffness
-    story.append(Paragraph("2. Laminate stiffness", st["h"]))
-    abd = Table([[_matrix("A", stiffness.A, 1e6, "MN/m", regular, bold),
-                  _matrix("B", stiffness.B, 1.0, "N", regular, bold),
-                  _matrix("D", stiffness.D, 1.0, "N·m", regular, bold)]],
-                colWidths=[60 * mm, 60 * mm, 60 * mm])
-    abd.setStyle(TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
-    story.append(abd)
-    c = constants
-    h_mm = (stiffness.z[-1] - stiffness.z[0]) * 1e3
-    story.append(Spacer(1, 5))
-    story.append(_table(
-        [["Thickness h [mm]", "E<sub>x</sub> [GPa]", "E<sub>y</sub> [GPa]", "G<sub>xy</sub> [GPa]", "ν<sub>xy</sub>", "ν<sub>yx</sub>", "E<sub>x</sub> flexural [GPa]", "E<sub>y</sub> flexural [GPa]"],
-         [f"{h_mm:.4g}", f"{c.Ex / 1e9:.4g}", f"{c.Ey / 1e9:.4g}", f"{c.Gxy / 1e9:.4g}", f"{c.nu_xy:.4g}",
-          f"{c.nu_yx:.4g}", f"{c.Ex_flex / 1e9:.4g}", f"{c.Ey_flex / 1e9:.4g}"]],
-        [22 * mm, 20 * mm, 20 * mm, 21 * mm, 17 * mm, 17 * mm, 30 * mm, 30 * mm], regular, bold, align_right_from=0))
-    b_max = float(abs(stiffness.B).max()); a_scale = float(abs(stiffness.A).max()) * (stiffness.z[-1] - stiffness.z[0])
-    if b_max > max(1e-8 * a_scale, 1e-10):
-        story.append(Paragraph("B ≠ 0: these are apparent constants with curvature free to develop; with bending restrained the "
-                               "membrane moduli are higher.", st["small"]))
-    story.append(Paragraph("Equivalent constants of the laminate as a homogeneous plate of thickness h, from the compliance "
-                           "ABD<super>−1</super> (membrane: E<sub>x</sub> = 1/(h·a<sub>11</sub>); flexural: E<sub>x</sub> = 12/(h<super>3</super>·d<sub>11</sub>)).", st["small"]))
-
-    # 3. Response
-    story.append(Paragraph("3. Mid-plane response", st["h"]))
-    e0, k = response.midplane_strain, response.curvature
-    story.append(_table(
-        [["ε<sub>x</sub><super>0</super> [µε]", "ε<sub>y</sub><super>0</super> [µε]", "γ<sub>xy</sub><super>0</super> [µε]", "κ<sub>x</sub> [1/m]", "κ<sub>y</sub> [1/m]", "κ<sub>xy</sub> [1/m]"],
-         [_fixed(e0[0] * 1e6, 1), _fixed(e0[1] * 1e6, 1), _fixed(e0[2] * 1e6, 1), _small(k[0]), _small(k[1]), _small(k[2])]],
-        [30 * mm] * 6, regular, bold, align_right_from=0))
-
-    # 4. Ply results
-    story.append(Paragraph("4. Ply stresses and first-ply screening", st["h"]))
-    rows = [["Ply", "Face", "Angle", "σ<sub>1</sub> [MPa]", "σ<sub>2</sub> [MPa]", "τ<sub>12</sub> [MPa]", "Max Stress index", "Mode", "Tsai–Wu FI", "Tsai–Wu R"]]
-    for point, allow in zip(response.ply_surfaces, surface_strengths):
-        check = evaluate_failure(point.local_stress, allow)
-        rows.append([str(point.ply), point.surface, f"{point.angle_deg:g}°",
-                     _fixed(point.local_stress[0] / 1e6, 2), _fixed(point.local_stress[1] / 1e6, 2),
-                     _fixed(point.local_stress[2] / 1e6, 2), f"{check.maximum_stress_utilization:.3f}",
-                     check.maximum_stress_mode, f"{check.tsai_wu_index:.3f}",
-                     _fmt(tsai_wu_load_factor(point.local_stress, allow), 4)])
-    results = _table(rows, [10 * mm, 14 * mm, 15 * mm, 17 * mm, 17 * mm, 18 * mm, 19 * mm, 30 * mm, 18 * mm, 18 * mm],
-                     regular, bold, align_right_from=2)
-    results.setStyle(TableStyle([("ALIGN", (7, 1), (7, -1), "LEFT")]))
-    story.append(results)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=16*mm, rightMargin=16*mm,
+                            topMargin=12*mm, bottomMargin=14*mm, title="Composite screening report", pageCompression=0)
+    story = [Paragraph("Composite screening report", styles["title"]),
+             Paragraph("Educational CLT and cylinder screening. Reference data, not qualified design allowables.", styles["small"])]
+    def text(value, style="body"):
+        story.append(Paragraph(value, styles[style]))
+    def heading(value):
+        text(value, "h")
+    def table(rows, widths):
+        wrapped = [[Paragraph(escape(str(v)), styles["small"]) for v in row] for row in rows]
+        t = Table(wrapped, colWidths=widths, hAlign="LEFT")
+        t.setStyle(TableStyle([("GRID",(0,0),(-1,-1),.4,GRID), ("BACKGROUND",(0,0),(-1,0),SHADE),
+                               ("VALIGN",(0,0),(-1,-1),"TOP"),("TOPPADDING",(0,0),(-1,-1),3),
+                               ("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+        story.append(t)
+    heading("Inputs and load cases")
+    h = float(stiffness.z[-1]-stiffness.z[0])
+    text(f"<b>Material:</b> {escape(material_name)}. {len(layup)} physical plies; thickness {h*1e3:.4g} mm.")
+    # Run-length encoding keeps the full physical sequence readable at 40 and 100 plies.
+    groups = []
+    uniform = len({(p['t'], p['mat']) for p in layup}) == 1
+    for ply in layup:
+        label = f"{ply['theta']:g}°" if uniform else f"{ply['theta']:g}°/{ply['t']*1e3:.3g}mm/M{ply['mat']}"
+        if groups and groups[-1][0] == label:
+            groups[-1][1] += 1
+        else:
+            groups.append([label, 1])
+    sequence = "; ".join(f"{label}" + (f" x{count}" if count > 1 else "") for label,count in groups)
+    if len(sequence) <= 500:
+        text("Bottom to top: " + escape(sequence), "small")
+    else:
+        text("Long stack: full bottom-to-top ply inputs remain in the app; this page reports the governing result.", "small")
+    active = sorted({p["mat"] for p in layup})
+    if uniform:
+        text(f"Each ply: {layup[0]['t']*1e3:.4g} mm, M{layup[0]['mat']}.", "small")
+    text("; ".join(f"M{i}: {escape(material_names[i])}" for i in active), "small")
+    text("Laminate loads: N [kN/m] = (" + ", ".join(f"{v/1e3:.4g}" for v in loads[:3]) +
+         "); M [N·m/m] = (" + ", ".join(f"{v:.4g}" for v in loads[3:]) + ").", "small")
+    heading("Laminate stiffness and response (sidebar mechanical loads)")
+    table([["A [MN/m]", "B [N]", "D [N·m]"]] +
+          [[" / ".join(_fmt(v/scale) for v in matrix[row]) for matrix,scale in
+            ((stiffness.A,1e6),(stiffness.B,1),(stiffness.D,1))] for row in range(3)], [60*mm]*3)
+    text("Each matrix row uses x, y, xy order. E_x / E_y / G_xy [GPa]: " +
+         " / ".join(f"{v/1e9:.4g}" for v in (constants.Ex, constants.Ey, constants.Gxy)) + ".", "small")
+    text("Mid-plane strain [µε]: " + " / ".join(_fixed(v*1e6,1) for v in response.midplane_strain) +
+         "; curvature [1/m]: " + " / ".join(_small(v) for v in response.curvature) + ".", "small")
     index, factor, criterion = first_ply
     if math.isfinite(factor):
-        p = response.ply_surfaces[index]
-        verdict = (f"<b>First-ply result:</b> proportional load factor <b>{factor:.3f}</b> (all six load components scaled together). "
-                   f"First limit at ply {p.ply} ({p.angle_deg:g}°, {p.surface.lower()} face), {criterion} criterion. "
-                   + ("Below the first-ply limit at the entered loads." if factor >= 1 else
-                      "The entered loads exceed the first-ply limit."))
+        point = response.ply_surfaces[index]
+        text(f"Mechanical first-ply load factor: <b>{factor:.4g}</b> ({escape(criterion)}), ply {point.ply}, {escape(point.surface)} face. " +
+             ("Entered loads are below or at the initiation limit." if factor >= 1 else "Entered loads exceed the initiation limit."))
     else:
-        verdict = "<b>First-ply result:</b> no load applied."
-    story.append(Spacer(1, 5))
-    story.append(KeepTogether([Paragraph(verdict, st["body"])]))
-
-    # 5. Limits
-    story.append(Paragraph("5. Model limits", st["h"]))
-    story.append(Paragraph(
-        "Linear-elastic plies in plane stress, perfectly bonded, thin-plate (Kirchhoff) kinematics without transverse shear. "
-        "Not included: cure/thermal residual stresses, interlaminar stresses, progressive damage, buckling and environmental "
-        "effects. Strengths are literature reference values, not qualified allowables; the Tsai–Wu interaction term "
-        "F<sub>12</sub> = −0.5√(F<sub>11</sub>F<sub>22</sub>) is assumed.", st["small"]))
-
-    def footer(canvas, doc_):
-        canvas.saveState()
-        canvas.setFont(regular, 7)
-        canvas.setFillColor(colors.HexColor("#7a8c98"))
-        canvas.drawString(16 * mm, 8 * mm, "Composite Laminate Design & Analysis Tool · laminate analysis report")
-        canvas.drawRightString(A4[0] - 16 * mm, 8 * mm, f"Page {doc_.page}")
-        canvas.restoreState()
-
+        text("Mechanical first-ply load factor: no applied load.")
+    if vessel is not None:
+        current, progressive = vessel["screen"], vessel["progressive"]
+        heading("Cylinder pressure case (separate from sidebar loads)")
+        text(f"R = {vessel['radius_m']*1e3:.4g} mm; current layup h = {h*1e3:.4g} mm; working pressure = {vessel['working_mpa']:.4g} MPa. Nx=pR/2, Ny=pR.")
+        table([["First-ply CLT [MPa]", "First-ply Hashin [MPa]", "Last-ply model stop [MPa]", "Netting [MPa]"],
+               [f"{current.first_ply_pressure_pa/1e6:.4f}", f"{progressive.first_ply_load_factor/1e6:.4f}",
+                f"{progressive.last_ply_load_factor/1e6:.4f}", f"{current.netting_pressure_pa/1e6:.4f}"]], [45*mm]*4)
+        text("First-ply marks calculated initiation. Last-ply is the assumed algorithm stop, <b>not an ultimate or burst load</b>. Netting is a separate fibre-only equilibrium reference.", "small")
+        story.append(pressure_strain_drawing(progressive, regular))
+        text("Points: initiation modes before stiffness reduction; jumps: redistribution at held pressure. This is not a stability analysis.", "small")
+    heading("Limits and validation")
+    text(validation_status(), "small")
+    text("Model assumptions: plane stress, perfect bonding, thin-plate CLT; Tsai-Wu interaction F12 is assumed. " +
+         ("Cylinder degradation: E1 retained " + f"{vessel['rules'].fibre_E1_factor:g}; E2 / G12 retained " +
+          f"{vessel['rules'].matrix_E2_factor:g} / {vessel['rules'].matrix_G12_factor:g}; Hashin transverse shear strength assumed when not supplied. " if vessel else "") +
+         "Not included in this export: thermal preload, dome strength, liner/boss load sharing, interlaminar damage, fatigue, leakage, buckling, manufacturing defects or temperature-dependent properties.", "small")
+    day = datetime.now(timezone(timedelta(hours=5))).date()
+    def footer(canvas, document):
+        canvas.setFont(regular, 6.5)
+        canvas.setFillColor(INK)
+        canvas.drawString(16*mm, 9*mm, f"{day.isoformat()} (UTC+5) · {APP_VERSION} · " + _recorded_tests())
+        canvas.drawRightString(A4[0]-16*mm, 6*mm, f"Page {document.page} · {APP_URL}")
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return buffer.getvalue()

@@ -29,10 +29,10 @@ class PressureVesselTabTests(unittest.TestCase):
     def test_first_ply_last_ply_and_netting_are_all_shown(self):
         metrics = self.metrics(self.run_app())
         for label in ("First-ply failure pressure [MPa]", "First-ply, Hashin [MPa]", "Last-ply (model stop) [MPa]",
-                      "Last-ply / first-ply", "Netting burst estimate [MPa]"):
+                      "Last-ply / first-ply", "Fibre-only netting reference [MPa]"):
             self.assertIn(label, metrics)
         self.assertGreaterEqual(float(metrics["Last-ply (model stop) [MPa]"]), float(metrics["First-ply, Hashin [MPa]"]))
-        self.assertGreater(float(metrics["Netting burst estimate [MPa]"]), 0.0)
+        self.assertGreater(float(metrics["Fibre-only netting reference [MPa]"]), 0.0)
 
     def test_degradation_factors_are_editable_and_change_the_last_ply_value(self):
         at = self.run_app()

@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-07",
+  "command": "python -m unittest discover -s tests -v",
+  "tests_run": 161,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "successful": true,
+  "scope": "Numerical checks, unchanged v3 snapshot, AppTest presets, input boundaries, chart arrays and one-page PDF values."
+}

@@ -1,9 +1,9 @@
 # ACCEPTANCE: tests that must pass per module
 
-## Existing (v2): 43 tests passing (98 in the whole suite after C3)
+## Historical baseline: v2 had 43 tests; the early C3 suite had 98
 Unidirectional stack recovers E1/E2/G12/nu12; quasi-isotropic Ex=Ey and Gxy=Ex/(2(1+nu)); [0/90]s matches published A11, D11; netting angle 54.74 deg and burst formula; exact netting for hoop+helical walls; first-ply pressure brings the governing criterion to 1.
 
-## Dome (C2): passing (19 tests in tests/test_dome.py; full suite 62, 1 skipped = PDF report without reportlab)
+## Dome: historical C2 baseline (19 dome tests; then 62 total, with one PDF skip without reportlab)
 - Winding angle = 90 deg at r = r0; alpha(R) = asin(r0/R); r sin(alpha) = r0 along the dome; r < r0 rejected.
 - Hemisphere: N_phi = N_theta = pR/2 at every station.
 - Ellipsoid: r1, r2 agree with the curvature of z(r) derived independently; a 2:1 head has N_theta = -pR at the equator.
@@ -54,3 +54,11 @@ Unidirectional stack recovers E1/E2/G12/nu12; quasi-isotropic Ex=Ey and Gxy=Ex/(
 - tests/snapshot_v3.json holds the key outputs at the app defaults (T300/5208): laminate A/B/D and first-ply of [0,45,-45,90]s; vessel first-ply, last-ply and netting for that layup and for the +/-54.74 deg wall; dome and thermal headline numbers; optimiser best candidates.
 - tests/test_snapshot_v3.py recomputes them and requires equality to relative 1e-9 (plus an absolute 1e-12 for round-off zeros); verified on Linux and Windows. Regenerate only for a confirmed error fix (`python tests/snapshot_v3_values.py --write`).
 - R0 current verification (7 October 2026): 146/146 tests pass, 0 skipped with streamlit and reportlab installed. Audit: verification/AUDIT_R0.md.
+
+## v4 refinement evidence
+- Current suite: 161 passed, 0 skipped; command and result in verification/qa_results.json and qa_test_log.txt.
+- AppTest grid renders all eleven existing tabs for every material dataset, load preset and layup preset; one ply, zero working pressure and missing custom CTE are exercised.
+- Direct thermal imports also render with a cached core package missing its new aggregate thermal exports (regression for the live ImportError scenario; live outcome requires deployment verification).
+- Chart coordinates equal the progressive solver arrays and pre-damage event strains; dome shaded station cells match membrane_valid.
+- Existing PDF export has one page for 4, 16 and 40 plies; exported cylinder values equal the solver values at the stated display precision. Rendered final sample and Report No. 2 were visually inspected.
+- Independent review confirmed no thermal or optimiser equation defect; core/, material records, validation numbers and the v3 snapshot are unchanged. No tests removed, dependencies added or tabs added.

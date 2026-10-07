@@ -33,11 +33,11 @@ On Windows, double-clicking `START_APP.cmd` creates a virtual environment, insta
 |---|---|
 | `core/` | CLT mechanics: `Q`, `Q̄`, `A/B/D`, engineering constants, laminate response, Maximum Stress, Tsai–Wu and Hashin (`failure.py`), progressive failure (`progressive.py`), cylinder resultants and netting theory, geodesic dome (`dome.py`) |
 | `workflow.py` | Layup parsing, ply-table validation, symmetry/balance checks, design summaries, pressure-vessel screening |
-| `report.py` | PDF report of the current analysis (ReportLab; DejaVu fonts in `assets/fonts`, Bitstream Vera licence) |
+| `report.py` | Existing PDF export: compact mechanical laminate summary, plus cylinder results and pressure-strain curve when exported from Pressure vessel; ReportLab and bundled DejaVu fonts |
 | `materials/` | Reference material data with sources |
 | `examples/` | Wind-blade spar-cap example (unsymmetric thick panel) |
 | `app.py` | Streamlit interface |
-| `tests/` | 146 automated tests (snapshot of key numbers, mechanics properties, reference values, hybrids, bending, engineering constants, pressure vessel, dome, Hashin, progressive failure, thermal response, optimiser, review regressions, app wiring, report, input validation) |
+| `tests/` | Automated tests (R0 baseline: 146; current run evidence in `verification/AUDIT.md`) (snapshot of key numbers, mechanics properties, reference values, hybrids, bending, engineering constants, pressure vessel, dome, Hashin, progressive failure, thermal response, optimiser, review regressions, app wiring, report, input validation) |
 | `verification/` | Reference-value script, the engineering audit log (`AUDIT.md`) and the verdicts on the two independent reviews: dome (`REVIEW_C3.md`) and Hashin / progressive failure (`REVIEW_C4.md`) |
 | `validation/` | Burst-test cases (`data.json`, unverified), the runner `run_validation.py`, `results.json`, tables and chart in `README.md`; result: no like-for-like comparison was possible (see its README) |
 | `reports/` | Report No. 2 (PDF) and its generator |
@@ -55,6 +55,16 @@ CTEs are sourced from [York (2015), Table 2](https://eprints.gla.ac.uk/105827/1/
 The ranked top five can use `first_ply` (the existing Maximum Stress/Tsai–Wu minimum), `last_ply` (the existing Hashin progressive-failure stopping point), or `fibre_limit` (a netting-theory projection upper bound, not a CLT fibre-rupture prediction). Every candidate is evaluated for both first-ply failure and progressive stopping, using the supplied degradation rules. Results are compared with the continuous netting-theory reference, θ = atan(√2) and p = 2Xt h/(3R); a ±θ CLT/progressive comparison is included only when n is divisible by four. This compact button-run UI reports candidates and does not apply a result to the current layup. Changed inputs hide stale rankings until the search is rerun. Unbalanced stacks allow CLT shear strain without end restraints; their exact fibre-only netting pressure is not reported because the existing axial/hoop solver does not enforce shear equilibrium. Ties at 12 significant digits prefer balanced stacks nearest the netting angle, then lexicographic angles. The fixed-seed search is a bounded sample, not a global-optimality guarantee, and neither the netting bound nor these screening predictions are burst validated. Netting is a separate fibre-only model, not an upper bound on matrix-bearing CLT.
 
 Reproduce the end-of-task thermal PDF with `python reports/make_report_c5.py` (existing ReportLab dependency). The complete source-controlled test suite is `python -m unittest discover -s tests -v`; ignored `_local/old_files` contains obsolete local tests and is outside that suite.
+
+## Refinement v4
+
+The existing eleven tabs now show a shared failure-mode palette, a fifteen-term glossary, input-scope hints, model-assumption badges and the unchanged experimental-validation gap. Pressure-strain event points use the solver's pre-damage states; dome shading uses the existing `membrane_valid` flags. The cylinder PDF keeps 4-, 16- and 40-ply examples on one page and reports first-ply, the assumed last-ply model stop and a separate fibre-only netting reference. The general export still uses sidebar mechanical loads; thermal preload and dome results are excluded from the PDF.
+
+No physics module, dependency, tab or navigation mode was added. `core/`, source material values and `tests/snapshot_v3.json` remain unchanged. See `verification/AUDIT.md` for stage evidence and incomplete checks. Optional R6 remains dependent on the original paper pages (user task A5); personal tasks A1-A5 remain the user's work.
+
+![Existing pressure-strain chart with initiation-event colours](assets/screenshots/v4_pressure_curve.png)
+
+Current recorded suite: **161 tests passed, 0 skipped** (`verification/qa_results.json`). Independent thermal/optimiser review: `verification/REVIEW_thermal_optimise.md`; text review: `verification/TEXT_REVIEW_G2.md`; input cases: `verification/ROBUSTNESS_R5.md`. The saved sample export is `output/pdf/V4_screening_sample.pdf`.
 
 ## Data sources
 
