@@ -10,12 +10,19 @@ import pandas as pd
 import streamlit as st
 
 from core import (
-    StrengthAllowables, assemble_laminate_stiffness, compute_Q_matrix,
+    StrengthAllowables, assemble_laminate_stiffness, compute_Q_matrix, engineering_constants,
     evaluate_failure, recover_ply_surfaces, transform_Q, tsai_wu_load_factor,
 )
+from core.vessel import NETTING_ANGLE_DEG
 from examples.spar_cap import MATERIAL_SOURCE, analyze_spar_cap
 from materials import DEFAULT_MATERIALS
-from workflow import first_ply_limit, assess_design, editor_to_layup, is_balanced, is_symmetric, parse_layup
+from workflow import (first_ply_limit, angle_ply_wall, assess_design, editor_to_layup, is_balanced, is_symmetric,
+                      parse_layup, screen_cylinder)
+
+try:
+    from report import build_pdf_report
+except ImportError:  # reportlab not installed: the app still runs without the PDF export
+    build_pdf_report = None
 
 st.set_page_config(page_title="Composite Laminate Design & Analysis Tool", page_icon="🧭", layout="wide")
 st.markdown("""
@@ -216,12 +223,14 @@ MATERIAL_NAMES = ["Sidebar material", *DEFAULT_MATERIALS]
 materials_list = [material] + [record.as_core_material() for record in DEFAULT_MATERIALS.values()]
 strengths_list = [strengths] + [StrengthAllowables(**record.as_strengths()) for record in DEFAULT_MATERIALS.values()]
 
+values_edited = False
 if selected:
     entered = np.array([e1, e2, g12, v12, xt, xc, yt, yc, shear])
     cited = np.array([selected.E1 / 1e9, selected.E2 / 1e9, selected.G12 / 1e9,
                       selected.v12, selected.Xt / 1e6, selected.Xc / 1e6,
                       selected.Yt / 1e6, selected.Yc / 1e6, selected.S / 1e6])
-    if not np.allclose(entered, cited, rtol=1e-9, atol=1e-9):
+    values_edited = not np.allclose(entered, cited, rtol=1e-9, atol=1e-9)
+    if values_edited:
         st.info("Some values differ from the cited material dataset. Current calculations use your edited inputs.")
 
 if v12**2 * e2 / e1 >= 1:
@@ -266,16 +275,25 @@ if stiffness is not None:
             st.error(f"**Result in plain words:** already beyond the screening limit. At these loads {where} exceeds it according to the "
                      f"{verdict_criterion} criterion; the loads must be reduced to **{verdict_factor:.2f}×** the entered values to stay below it.")
 
+    if build_pdf_report is not None:
+        report_bytes = build_pdf_report(
+            material_name=st.session_state.material_choice + (" (edited values)" if values_edited else ""), material=material, strengths=strengths,
+            layup=st.session_state.plies, material_names=MATERIAL_NAMES, loads=loads, stiffness=stiffness,
+            constants=engineering_constants(stiffness), response=response, surface_strengths=surface_strengths,
+            first_ply=(verdict_i, verdict_factor, verdict_criterion))
+        st.download_button("Download a PDF report of this analysis", report_bytes, file_name="laminate_analysis_report.pdf",
+                           mime="application/pdf", help="Inputs, layup, A/B/D, engineering constants, mid-plane response and ply-by-ply failure screening.")
+
 with st.container(border=True):
     st.markdown("**How to use this tool: four steps, left to right**")
     how_cols = st.columns(4)
     how_cols[0].markdown("**① Material**  \nPick or edit the fibre/resin data in the sidebar. See Q in the *1 · Material* tab.")
     how_cols[1].markdown("**② Layup**  \nBuild the stack in the *2 · Layup* tab: angle, thickness and material of every ply.")
     how_cols[2].markdown("**③ Load**  \nChoose a load preset in the sidebar (or type forces and moments).")
-    how_cols[3].markdown("**④ Read the result**  \nStiffness in *3 · ABD*, strains and stresses in *4 · Response*, the first-ply check in *5 · Failure*. The coloured box above sums it up.")
+    how_cols[3].markdown("**④ Read the result**  \nStiffness in *3 · ABD*, strains and stresses in *4 · Response*, the first-ply check in *5 · Failure*. The coloured box above sums it up; the PDF button saves a report.")
 
 tabs = st.tabs(["Start here", "1 · Material & Q", "2 · Layup & Q̄", "3 · ABD", "4 · Response",
-                "5 · Failure", "Compare designs", "Manufacturing", "Applications", "Verification"])
+                "5 · Failure", "Compare", "Pressure vessel", "Manufacturing", "Applications", "Verification"])
 
 with tabs[0]:
     st.subheader("A small experiment before the matrices")
@@ -418,6 +436,21 @@ with tabs[3]:
                                                             ("%.2f", "%.1f", "%.3f")):
             column.markdown(f"**{title}**")
             show_matrix(column, matrix, divisor, ["x", "y", "xy"], pattern)
+        constants = engineering_constants(stiffness)
+        st.markdown("**Equivalent engineering constants** (the laminate treated as a homogeneous plate of thickness h)")
+        const_cols = st.columns(6)
+        const_cols[0].metric("$E_x$ [GPa]", f"{constants.Ex / 1e9:.2f}")
+        const_cols[1].metric("$E_y$ [GPa]", f"{constants.Ey / 1e9:.2f}")
+        const_cols[2].metric("$G_{xy}$ [GPa]", f"{constants.Gxy / 1e9:.2f}")
+        const_cols[3].metric("$\\nu_{xy}$", f"{constants.nu_xy:.3f}")
+        const_cols[4].metric("$E_x$ flexural [GPa]", f"{constants.Ex_flex / 1e9:.2f}")
+        const_cols[5].metric("$E_y$ flexural [GPa]", f"{constants.Ey_flex / 1e9:.2f}")
+        if not near_zero(float(np.max(np.abs(stiffness.B))), float(np.max(np.abs(stiffness.A)) * (stiffness.z[-1] - stiffness.z[0]))):
+            ex_restrained = 1.0 / ((stiffness.z[-1] - stiffness.z[0]) * np.linalg.inv(stiffness.A)[0, 0])
+            st.warning(f"B ≠ 0: these are apparent constants with curvature free to develop (from ABD⁻¹). "
+                       f"With bending restrained, Ex = 1/(h·(A⁻¹)₁₁) = {ex_restrained / 1e9:.2f} GPa.")
+        st.caption("From the compliance a, d = blocks of ABD⁻¹: membrane Ex = 1/(h·a₁₁), Ey = 1/(h·a₂₂), Gxy = 1/(h·a₆₆), νxy = −a₁₂/a₁₁; "
+                   "flexural Ex = 12/(h³·d₁₁). Membrane and flexural values differ because D weights outer plies more.")
         with st.expander("Full ABD and ply-interface positions"):
             abd = tidy(pd.DataFrame(stiffness.ABD, index=["Nx", "Ny", "Nxy", "Mx", "My", "Mxy"],
                                     columns=["εx", "εy", "γxy", "κx", "κy", "κxy"]))
@@ -581,6 +614,90 @@ with tabs[6]:
             st.caption("A stiffer or thicker candidate may rank well while using more material. This is a transparent criterion-based ranking, not an optimiser.")
 
 with tabs[7]:
+    st.subheader("Pressure vessel: filament-wound cylinder")
+    st.info("**What to do:** set the radius and the wall, then read the winding-angle study. The study uses the sidebar material; "
+            "the second part checks the layup from the Layup tab as a cylinder wall.")
+    st.write("A closed thin-walled cylinder under internal pressure p carries Nx = pR/2 along its axis (x) and Ny = pR around the hoop (y). "
+             "Ply angles are measured from the axis, so a 90° ply is a hoop winding.")
+    st.latex(r"N_x=\tfrac{1}{2}pR,\qquad N_y=pR,\qquad \text{netting: }\tan^2\theta=\frac{N_y}{N_x}=2\;\Rightarrow\;\theta=54.74^\circ")
+    vessel_cols = st.columns(3)
+    radius_mm = vessel_cols[0].number_input("Radius R [mm]", min_value=1.0, value=100.0, step=10.0, key="vessel_radius")
+    wall_plies = int(vessel_cols[1].number_input("Wall plies for the ±θ study (multiple of 4)", min_value=4, max_value=100,
+                                                  value=16, step=4, key="vessel_plies"))
+    working_mpa = vessel_cols[2].number_input("Working pressure [MPa]", min_value=0.0, value=10.0, step=1.0, key="vessel_working")
+    radius_m = radius_mm * 1e-3
+    if wall_plies % 4:
+        st.error("Use a multiple of 4 plies, so the ±θ wall is balanced and symmetric.")
+    else:
+        sweep = []
+        for theta in range(0, 91):
+            result = screen_cylinder(angle_ply_wall(theta, wall_plies, ply_thickness_m), [material], [strengths], radius_m)
+            sweep.append({"angle": theta, "first_ply": result.first_ply_pressure_pa / 1e6, "netting": result.netting_bound_pa / 1e6,
+                          "mode": result.first_ply_mode})
+        sweep_frame = pd.DataFrame(sweep)
+        best = sweep_frame.loc[sweep_frame["first_ply"].idxmax()]
+        netting_best = screen_cylinder(angle_ply_wall(NETTING_ANGLE_DEG, wall_plies, ply_thickness_m), [material], [strengths], radius_m)
+        wall_mm = wall_plies * thickness_mm
+        study_cols = st.columns(4)
+        study_cols[0].metric("Wall thickness [mm]", f"{wall_mm:.2f}")
+        study_cols[1].metric("Netting angle", f"±{NETTING_ANGLE_DEG:.2f}°")
+        study_cols[2].metric("Netting burst at ±54.7° [MPa]", f"{netting_best.netting_pressure_pa / 1e6:.1f}")
+        best_label = f"{best['angle']:.0f}°" if best["angle"] in (0, 90) else f"±{best['angle']:.0f}°"
+        study_cols[3].metric("Best first-ply pressure [MPa]", f"{best['first_ply']:.1f} at {best_label}")
+        long = sweep_frame.drop(columns="mode").melt("angle", var_name="key", value_name="pressure")
+        long["limit"] = long["key"].map({"first_ply": "First-ply failure (CLT)", "netting": "Fibre limit (netting)"})
+        layers = [alt.Chart(long).mark_line(strokeWidth=3).encode(
+                      x=alt.X("angle:Q", title="Winding angle ±θ [deg]", scale=alt.Scale(domain=[0, 90])),
+                      y=alt.Y("pressure:Q", title="Pressure [MPa]", scale=alt.Scale(domainMin=0)),
+                      color=alt.Color("limit:N", scale=alt.Scale(domain=["First-ply failure (CLT)", "Fibre limit (netting)"],
+                                                                 range=["#e07b22", "#087f8c"]),
+                                      legend=alt.Legend(orient="top", title=None)),
+                      tooltip=[alt.Tooltip("angle:Q", title="Angle [deg]"), alt.Tooltip("limit:N", title="Limit"),
+                               alt.Tooltip("pressure:Q", title="Pressure [MPa]", format=".2f")]),
+                  alt.Chart(pd.DataFrame({"x": [NETTING_ANGLE_DEG]})).mark_rule(strokeDash=[5, 4], color="#5b7080").encode(x="x:Q")]
+        if working_mpa > 0:
+            layers.append(alt.Chart(pd.DataFrame({"y": [working_mpa]})).mark_rule(color="#c0392b").encode(y="y:Q"))
+        st.altair_chart(alt.layer(*layers).properties(height=330), width="stretch")
+        st.caption(f"±θ wall of {wall_plies} plies, sidebar material, R = {radius_mm:g} mm. Dashed line: netting angle 54.74°"
+                   + ("; red line: working pressure." if working_mpa > 0 else ".")
+                   + " Away from 54.74° fibres alone cannot balance Nx and Ny; the teal curve is the pressure at which the more demanding "
+                   "direction would bring the fibres to Xt (an upper bound).")
+        ratio = netting_best.first_ply_pressure_pa / max(netting_best.netting_pressure_pa, 1e-12)
+        peak_text = (f"is also highest near this angle here ({best_label}, failure mode: {best['mode'].lower()}). "
+                     if abs(best["angle"] - NETTING_ANGLE_DEG) <= 3 else
+                     f"peaks at {best_label} for this material (failure mode: {best['mode'].lower()}). ")
+        ratio_text = (f"At ±54.7° the first ply fails at about {ratio:.0%} of the netting burst estimate: matrix damage starts well before "
+                      "the fibres break. Burst is governed by fibre failure; matrix cracks matter for stiffness, fatigue and gas tightness, "
+                      "which in a Type IV tank is provided by the polymer liner."
+                      if ratio < 1 else
+                      "For this material the CLT first-ply estimate exceeds the netting estimate, so the fibre-only bound is not meaningful here.")
+        st.markdown("**How to read it.** Netting theory lets only the fibres carry load: a ±θ wind can balance Ny = 2Nx with fibres alone only at "
+                    "tan²θ = 2, so the netting burst pressure peaks at ±54.7°. The CLT first-ply pressure, where the matrix still carries load, "
+                    + peak_text + ratio_text)
+        if radius_mm / max(wall_mm, 1e-9) < 10:
+            st.warning(f"R/h = {radius_mm / wall_mm:.1f} is below 10: the thin-wall assumption Ny = pR becomes inaccurate.")
+
+    st.markdown("**Check the current layup as a cylinder wall**")
+    if stiffness is not None:
+        current = screen_cylinder(st.session_state.plies, materials_list, strengths_list, radius_m)
+        current_wall = (stiffness.z[-1] - stiffness.z[0]) * 1e3
+        check_cols = st.columns(3)
+        check_cols[0].metric("First-ply failure pressure [MPa]", f"{current.first_ply_pressure_pa / 1e6:.2f}",
+                             help=f"Ply {current.first_ply_ply}, {current.first_ply_surface.lower()} face; {current.first_ply_criterion} criterion; mode: {current.first_ply_mode.lower()}.")
+        check_cols[1].metric("Netting burst estimate [MPa]", f"{current.netting_pressure_pa / 1e6:.2f}",
+                             help="Exact netting solution: fibre stresses between 0 and Xt that satisfy both axial and hoop equilibrium.")
+        if working_mpa > 0:
+            check_cols[2].metric("Netting burst / working pressure", f"{current.netting_pressure_pa / 1e6 / working_mpa:.2f}")
+        if current.netting_pressure_pa <= 0:
+            st.warning("Netting burst = 0: with fibres only, this layup cannot balance Nx and Ny (for example a single ±θ wind away from 54.7°). "
+                       "Add hoop (90°) or low-angle helical plies.")
+        st.caption(f"Current layup ({len(st.session_state.plies)} plies, h = {current_wall:.2f} mm), each ply with its own material. "
+                   "Hoop (90°) plies carry Ny and low-angle helical plies carry Nx; try [90,15,-15,90]s against [55,-55,55,-55]s.")
+    st.info("**Model limits.** Cylindrical section only (no domes, bosses or end-fittings), thin-wall membrane resultants, no liner, "
+            "no residual or thermal stresses. Netting ignores the matrix; for hybrid walls it is an upper estimate because fibres of "
+            "different stiffness do not reach their strengths together. Real tank burst also depends on dome design, winding quality and progressive damage.")
+
+with tabs[8]:
     st.subheader("Manufacturing: what the ideal CLT model leaves out")
     st.write("CLT assumes the laminate is built exactly as drawn. Choose a process or a discrepancy to see what has to be controlled before the model represents the real part.")
     st.dataframe(pd.DataFrame([
@@ -614,7 +731,7 @@ with tabs[7]:
     st.warning(defect_details[chosen_defect])
     st.markdown("Process-control and inspection examples: [FAA AC 21-26A](https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_21-26A.pdf). The app applies **no invented defect knockdown factor**.")
 
-with tabs[8]:
+with tabs[9]:
     st.subheader("Applications: two worked examples")
     application = st.radio("Choose a context", ["Aerospace-inspired panel", "Wind-blade spar cap (unsymmetric)"], horizontal=True)
     if application == "Aerospace-inspired panel":
@@ -650,10 +767,11 @@ with tabs[8]:
                  "so an axial force through the mid-plane also bends the panel.")
         st.caption(f"At h = {h_sc:.0f} mm this is a thick section; transverse shear, which CLT neglects, may matter.")
 
-with tabs[9]:
+with tabs[10]:
     st.subheader("Verification and model limits")
     st.write("Automated checks cover Q̄(0°) = Q, rotation invariants, B ≈ 0 for symmetric stacks, closed-form all-0° A and D, sign reversal of B, "
-             "stress recovery, hybrid stacks, pure bending and the failure criteria at their strength points. Run them with `python -m unittest discover -s tests -v`.")
+             "stress recovery, hybrid stacks, pure bending, the failure criteria at their strength points, laminate engineering constants "
+             "and the pressure-vessel resultants and netting angle. Run them with `python -m unittest discover -s tests -v`.")
     benchmark_material = {"E1": 181e9, "E2": 10.3e9, "G12": 7.17e9, "v12": 0.28}
     benchmark = assemble_laminate_stiffness(parse_layup("[0,90]s", 0.125e-3), [benchmark_material])
     reference = pd.DataFrame([{"Quantity": "A₁₁ [MN/m]", "Published example": 48.039, "Calculated": benchmark.A[0, 0] / 1e6},

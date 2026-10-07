@@ -6,7 +6,9 @@ A Streamlit application that makes Classical Lamination Theory (CLT) visible ste
 
 `material → Q → Q̄ → stacking sequence → ABD → mid-plane strain and curvature → ply stresses → first-ply failure (Maximum Stress, Tsai–Wu)`
 
-You choose the material (two cited datasets or your own values), the layup (angle, thickness and material of every ply, so hybrid stacks are possible) and the six load resultants (`Nx, Ny, Nxy, Mx, My, Mxy`). Every tab shows the equation, the numbers and a short interpretation. Further tabs compare 2–5 candidate layups, connect the model to manufacturing processes and defects, show two application examples, and check the code against a published worked example.
+You choose the material (two cited datasets or your own values), the layup (angle, thickness and material of every ply, so hybrid stacks are possible) and the six load resultants (`Nx, Ny, Nxy, Mx, My, Mxy`). Every tab shows the equation, the numbers and a short interpretation. The app also gives the laminate's equivalent engineering constants (Ex, Ey, Gxy, νxy, flexural moduli) and exports a PDF report of the current analysis.
+
+Further tabs compare 2–5 candidate layups, screen a filament-wound cylinder under internal pressure (first-ply pressure from CLT against the netting-theory burst estimate, with the ±54.7° winding angle), connect the model to manufacturing processes and defects, show two application examples, and check the code against a published worked example.
 
 ## Run locally
 
@@ -29,12 +31,13 @@ On Windows, double-clicking `START_APP.cmd` creates a virtual environment, insta
 
 | Path | Content |
 |---|---|
-| `core/` | CLT mechanics: `Q`, `Q̄`, `A/B/D`, laminate response, Maximum Stress and Tsai–Wu |
-| `workflow.py` | Layup parsing, ply-table validation, symmetry/balance checks, design summaries |
+| `core/` | CLT mechanics: `Q`, `Q̄`, `A/B/D`, engineering constants, laminate response, Maximum Stress and Tsai–Wu, cylinder resultants and netting theory |
+| `workflow.py` | Layup parsing, ply-table validation, symmetry/balance checks, design summaries, pressure-vessel screening |
+| `report.py` | PDF report of the current analysis (ReportLab; DejaVu fonts in `assets/fonts`, Bitstream Vera licence) |
 | `materials/` | Reference material data with sources |
 | `examples/` | Wind-blade spar-cap example (unsymmetric thick panel) |
 | `app.py` | Streamlit interface |
-| `tests/` | Automated tests (mechanics properties, reference values, hybrids, bending, input validation) |
+| `tests/` | 43 automated tests (mechanics properties, reference values, hybrids, bending, engineering constants, pressure vessel, report, input validation) |
 | `verification/` | Reference-value script and the engineering audit log |
 
 ## Data sources
@@ -42,6 +45,7 @@ On Windows, double-clicking `START_APP.cmd` creates a virtual environment, insta
 - Lamina data: the classic T300/5208 graphite/epoxy and Scotchply 1002 glass/epoxy values (Tsai & Hahn, *Introduction to Composite Materials*, 1980; Kaw, *Mechanics of Composite Materials*, 2nd ed., CRC Press, 2006), as tabulated in [Martinez & Bishay, *Composites Part C* (2021), Table 2](https://www.csun.edu/~pbishay/pubs/Martinez_Bishay_CPC_2020.pdf). The 0.125 mm ply thickness is an illustrative value.
 - Verification: the `[0/90]s` stiffness is compared with a [published worked CLT example](https://mpolyco.com/learn/classical-laminate-theory) (`A₁₁ = 48.039 MN/m`, `D₁₁ = 1.671 N·m`).
 - Spar-cap example: glass material data from Sandia report SAND2011-3779 (SNL100-00 blade), Table 19.
+- Pressure vessel: thin-wall equilibrium and netting analysis as in standard filament-winding texts (e.g. S. T. Peters (ed.), *Composite Filament Winding*, ASM International, 2011).
 - Manufacturing and aerospace context: [FAA AC 21-26A](https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC_21-26A.pdf), [FAA AC 20-107B](https://www.faa.gov/airports/resources/advisory_circulars/index.cfm/go/document.information/documentNumber/20-107B).
 
 ## How AI was used
@@ -50,4 +54,4 @@ The code was written with AI coding assistants, working under written rules. [AG
 
 ## Limitations
 
-Linear-elastic plies in plane stress, perfect bonding and thin-plate (Kirchhoff) kinematics. Not modelled: cure/thermal residual stresses, transverse shear, interlaminar stresses, progressive damage, buckling and environmental effects. Strengths are literature values, not qualified allowables, and Tsai–Wu uses the assumed interaction term `F12 = −0.5√(F11·F22)`. The tool is for learning and first-ply screening, not for certified design.
+Linear-elastic plies in plane stress, perfect bonding and thin-plate (Kirchhoff) kinematics. Not modelled: cure/thermal residual stresses, transverse shear, interlaminar stresses, progressive damage, buckling and environmental effects. The pressure-vessel tab covers the cylindrical section only (no domes, end-fittings or liner). Strengths are literature values, not qualified allowables, and Tsai–Wu uses the assumed interaction term `F12 = −0.5√(F11·F22)`. The tool is for learning and first-ply screening, not for certified design.

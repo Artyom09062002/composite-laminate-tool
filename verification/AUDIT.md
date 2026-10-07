@@ -26,6 +26,14 @@ The code was written with AI coding assistants. An AI-written change was accepte
 5. **The balance check ignored ply material**, so +45° graphite with −45° glass was reported as balanced. It now matches angle and material.
 6. **Explanatory text corrected:** under `Nx`, `εx = a₁₁Nx` (not `Nx/A₁₁`) when `A₁₆ ≠ 0`; symmetry removes `B`, balance removes `A₁₆/A₂₆`, neither removes `D₁₆/D₂₆`; only the global strains are continuous through the thickness.
 
+## Update: engineering constants, PDF report, pressure vessel
+
+Added after supervisor feedback, with the same rule: no new result without a test.
+
+1. **Equivalent engineering constants** from `ABD⁻¹`. Checked: a unidirectional stack returns E₁, E₂, G₁₂ and ν₁₂ exactly; a quasi-isotropic stack has Ex = Ey and Gxy = Ex/(2(1+νxy)), while its flexural moduli are not isotropic; for symmetric stacks the membrane constants equal those from `A⁻¹`.
+2. **PDF report** of the current analysis (inputs, layup, A/B/D, constants, mid-plane response, ply-by-ply screening, model limits). Checked that a valid PDF is produced.
+3. **Filament-wound cylinder.** Nx = pR/2 and Ny = pR; netting angle tan²θ = 2 (54.74°) and netting burst 2·Xt·h/(3R) at that angle. A review found that the first netting formula, min(2Σ X t cos², Σ X t sin²)/R, overestimates burst for mixed hoop + helical walls (by 25 % for [90,30,−30]s); it was replaced by the exact fibres-only solution (pR = 2.4·X·t for that wall, now a test), and the min() form is kept only as the labelled upper bound in the winding-angle plot. Also checked: a single ±45° wind has zero netting capacity; a pure hoop wall carries no axial load; the reported first-ply pressure brings the governing criterion exactly to 1; for T300/5208 the CLT first-ply pressure of a ±θ wall peaks within 2° of the netting angle.
+
 ## Remaining limitations
 
 Strengths are literature values, not qualified allowables. `F₁₂ = −0.5√(F₁₁F₂₂)` is an assumption. Results are linear-elastic, first-ply CLT screening without residual thermal stresses, transverse shear or progressive damage.

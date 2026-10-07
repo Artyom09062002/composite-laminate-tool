@@ -11,6 +11,7 @@ import re
 import numpy as np
 
 from core import StrengthAllowables, assemble_laminate_stiffness, evaluate_failure, recover_ply_surfaces, tsai_wu_load_factor
+from core.vessel import cylinder_resultants, netting_bound, netting_pressure
 
 
 def parse_layup(text: str, thickness_m: float) -> list[dict]:
@@ -164,3 +165,41 @@ def assess_design(name: str, layup_text: str, thickness_m: float, material: dict
         critical_criterion=criterion,
         first_ply_load_factor=load_factor,
     )
+
+
+@dataclass(frozen=True)
+class VesselScreening:
+    first_ply_pressure_pa: float
+    first_ply_ply: int | None
+    first_ply_surface: str
+    first_ply_criterion: str
+    first_ply_mode: str
+    netting_pressure_pa: float
+    netting_bound_pa: float
+
+
+def screen_cylinder(layup: list[dict], materials: list[dict], strengths, radius_m: float) -> VesselScreening:
+    """First-ply (CLT) and netting (fibres only) pressures of a closed thin cylinder.
+
+    The response is linear, so the first-ply pressure is the first-ply load factor of a
+    unit-pressure load case. ``strengths`` is one StrengthAllowables per material in
+    ``materials`` (same indexing as ``ply["mat"]``).
+    """
+    stiffness = assemble_laminate_stiffness(layup, materials)
+    unit = cylinder_resultants(1.0, radius_m)
+    response = recover_ply_surfaces(stiffness, layup, materials, unit)
+    surface_strengths = [strengths[layup[p.ply - 1]["mat"]] for p in response.ply_surfaces]
+    index, factor, criterion = first_ply_limit(response.ply_surfaces, surface_strengths)
+    point = response.ply_surfaces[index]
+    mode = evaluate_failure(point.local_stress, surface_strengths[index]).maximum_stress_mode
+    fibre_x = [strengths[ply["mat"]].Xt for ply in layup]
+    return VesselScreening(factor, point.ply, point.surface, criterion, mode,
+                           netting_pressure(layup, fibre_x, radius_m), netting_bound(layup, fibre_x, radius_m))
+
+
+def angle_ply_wall(theta: float, plies: int, thickness_m: float, mat: int = 0) -> list[dict]:
+    """Balanced symmetric +/-theta wall with ``plies`` plies (a multiple of 4)."""
+    if plies < 4 or plies % 4:
+        raise ValueError("Use a multiple of 4 plies for a balanced symmetric +/-theta wall")
+    half = [theta, -theta] * (plies // 4)
+    return [{"theta": float(a), "t": thickness_m, "mat": mat} for a in half + half[::-1]]
