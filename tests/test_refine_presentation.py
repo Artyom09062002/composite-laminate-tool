@@ -12,11 +12,12 @@ from report import build_pdf_report, pressure_strain_drawing
 from workflow import parse_layup, screen_cylinder, first_ply_limit
 
 class PresentationTests(unittest.TestCase):
-    def analysis(self, count):
+    def analysis(self, count, unbalanced=False):
         record = next(iter(DEFAULT_MATERIALS.values()))
         mat = record.as_core_material()
         allow = StrengthAllowables(**record.as_strengths())
-        layup = parse_layup('[' + ','.join(['0','45','-45','90']*(count//4)) + ']', record.ply_thickness)
+        angles = ['54.735610317245346']*count if unbalanced else ['0','45','-45','90']*(count//4)
+        layup = parse_layup('[' + ','.join(angles) + ']', record.ply_thickness)
         stiffness = assemble_laminate_stiffness(layup, [mat])
         response = recover_ply_surfaces(stiffness, layup, [mat], [1e5,0,0,0,0,0])
         prog = progressive_failure(layup, [mat], [allow], cylinder_resultants(1,.1))
@@ -49,9 +50,9 @@ class PresentationTests(unittest.TestCase):
         self.assertIn('Not validated against experiment',validation_status())
 
     def test_pdf_one_page_and_cylinder_values_for_4_16_40_plies(self):
-        for count in (4,16,40):
-            with self.subTest(plies=count):
-                layup,mat,allow,stiffness,response,prog,screen = self.analysis(count)
+        for count, unbalanced in ((4,False),(16,False),(40,False),(4,True)):
+            with self.subTest(plies=count,unbalanced=unbalanced):
+                layup,mat,allow,stiffness,response,prog,screen = self.analysis(count,unbalanced)
                 allows = [allow]*len(response.ply_surfaces)
                 pdf = build_pdf_report(material_name='T300/5208',material=mat,strengths=allow,layup=layup,
                       material_names=['Sidebar material'],loads=[1e5,0,0,0,0,0],stiffness=stiffness,
@@ -62,6 +63,11 @@ class PresentationTests(unittest.TestCase):
                 for value in (screen.first_ply_pressure_pa,prog.first_ply_load_factor,prog.last_ply_load_factor,screen.netting_pressure_pa):
                     self.assertIn(f'{value/1e6:.4f}'.encode(),pdf)
                 self.assertIn(b'not an ultimate or burst load',pdf)
+                self.assertIn(b'E1=181',pdf)
+                self.assertIn(b'Xt=1500',pdf)
+                self.assertIn(b'linear-model extrapolation',pdf)
+                if unbalanced:
+                    self.assertIn(b'not shear equilibrium',pdf)
 
 if __name__ == '__main__':
     unittest.main()

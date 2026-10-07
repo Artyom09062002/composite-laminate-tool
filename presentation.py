@@ -33,7 +33,7 @@ def progressive_frames(result):
 def failure_event_chart(events):
     modes = [mode for mode in MODE_COLOURS if mode in set(events["Mode"])]
     return alt.Chart(events).mark_point(filled=True, size=90, stroke="white").encode(
-        x=alt.X("strain:Q", title="Hoop strain εy [%]"),
+        x=alt.X("strain:Q", title="Linear-model hoop strain εy [%]"),
         y=alt.Y("pressure:Q", title="Pressure [MPa]"),
         color=alt.Color("Mode:N", scale=alt.Scale(domain=modes, range=[MODE_COLOURS[mode] for mode in modes]),
                         legend=alt.Legend(title="Initiation mode", orient="bottom", columns=2, labelLimit=250)),

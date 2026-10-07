@@ -98,7 +98,9 @@ test_glass_epoxy_30_degree_qbar_matches_closed_form (test_reference_values.Refer
 test_graphite_epoxy_q_matches_independent_rounded_values (test_reference_values.ReferenceValueTests.test_graphite_epoxy_q_matches_independent_rounded_values) ... ok
 test_all_material_load_and_layup_presets_render_every_tab (test_refine_grid.RefineGridTests.test_all_material_load_and_layup_presets_render_every_tab) ... ok
 test_app_loads_with_cached_core_package_missing_thermal_exports (test_refine_grid.RefineGridTests.test_app_loads_with_cached_core_package_missing_thermal_exports) ... ok
+test_prediction_follows_edited_material_endpoints (test_refine_grid.RefineGridTests.test_prediction_follows_edited_material_endpoints) ... ok
 test_single_ply_zero_pressure_and_missing_cte_are_clear (test_refine_grid.RefineGridTests.test_single_ply_zero_pressure_and_missing_cte_are_clear) ... ok
+test_zero_mechanical_load_and_unbalanced_netting_are_qualified (test_refine_grid.RefineGridTests.test_zero_mechanical_load_and_unbalanced_netting_are_qualified) ... ok
 test_angle_wall_count_validation_and_large_shared_helper (test_refine_inputs.RefineInputTests.test_angle_wall_count_validation_and_large_shared_helper) ... ok
 test_empty_and_over_limit_stacks (test_refine_inputs.RefineInputTests.test_empty_and_over_limit_stacks) ... ok
 test_extreme_angles_reduce_before_mechanics (test_refine_inputs.RefineInputTests.test_extreme_angles_reduce_before_mechanics) ... ok
@@ -161,6 +163,6 @@ test_strength_and_load_validation (test_workflow.WorkflowTests.test_strength_and
 test_tsai_wu_multiplier_reaches_failure_and_zero_load_is_unbounded (test_workflow.WorkflowTests.test_tsai_wu_multiplier_reaches_failure_and_zero_load_is_unbounded) ... ok
 
 ----------------------------------------------------------------------
-Ran 161 tests in 53.481s
+Ran 163 tests in 65.179s
 
 OK

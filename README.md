@@ -64,7 +64,9 @@ No physics module, dependency, tab or navigation mode was added. `core/`, source
 
 ![Existing pressure-strain chart with initiation-event colours](assets/screenshots/v4_pressure_curve.png)
 
-Current recorded suite: **161 tests passed, 0 skipped** (`verification/qa_results.json`). Independent thermal/optimiser review: `verification/REVIEW_thermal_optimise.md`; text review: `verification/TEXT_REVIEW_G2.md`; input cases: `verification/ROBUSTNESS_R5.md`. The saved sample export is `output/pdf/V4_screening_sample.pdf`.
+Current recorded suite: **163 tests passed, 0 skipped** (`verification/qa_results.json`). Independent thermal/optimiser review: `verification/REVIEW_thermal_optimise.md`; text review: `verification/TEXT_REVIEW_G2.md`; input cases: `verification/ROBUSTNESS_R5.md`. The saved sample export is `output/pdf/V4_screening_sample.pdf`.
+
+For the professor-facing demonstration, use [the five-minute route](DEMO_ROUTE.md) and [the limitations memo](LIMITS_BEFORE_SHOW.md). The final reader review is in `verification/PROFESSOR_PASS.md`. The quiz follows the entered material, thermal/no-load wording is separated, and unbalanced netting and large-strain extrapolation are explicitly qualified. The PDF records the actual sidebar elastic and strength inputs.
 
 ## Data sources
 

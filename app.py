@@ -296,16 +296,16 @@ if stiffness is not None:
 
     verdict_i, verdict_factor, verdict_criterion = first_ply_limit(response.ply_surfaces, surface_strengths)
     if math.isinf(verdict_factor):
-        st.info("**Result in plain words:** no load is applied, so nothing is stressed. Choose a load preset in the sidebar.")
+        st.info("**Mechanical summary:** no sidebar mechanical load is applied. Thermal residual stress is assessed separately in Failure.")
     else:
         vp = response.ply_surfaces[verdict_i]
         where = f"Ply {vp.ply} ({vp.angle_deg:g}°, {vp.surface.lower()} face)"
         if verdict_factor >= 1:
-            st.success(f"**Result in plain words:** below the screening limit. You could multiply the loads by about "
-                       f"**{verdict_factor:.2f}** before the first ply reaches its limit: {where}, according to the {verdict_criterion} criterion.")
+            st.success(f"**Mechanical summary:** at or below the screening limit for the sidebar loads. The calculated initiation boundary is at about "
+                       f"**{verdict_factor:.2f}×** these loads: {where}, according to the {verdict_criterion} criterion.")
         else:
-            st.error(f"**Result in plain words:** already beyond the screening limit. At these loads {where} exceeds it according to the "
-                     f"{verdict_criterion} criterion; the loads must be reduced to **{verdict_factor:.2f}×** the entered values to stay below it.")
+            st.error(f"**Mechanical summary:** already beyond the screening limit for the sidebar loads. At these loads {where} exceeds it according to the "
+                     f"{verdict_criterion} criterion; **{verdict_factor:.2f}×** the entered values reaches the calculated initiation boundary. Lower factors lie below it.")
 
     if build_pdf_report is not None:
         report_bytes = build_pdf_report(
@@ -332,17 +332,19 @@ with tabs[0]:
     st.write("The 1-axis follows the fibres. Before opening the detailed results, predict what happens when all four plies rotate away from a fixed x-direction tensile load.")
     prediction = st.radio("From 0° to 90°, will x-direction extensional stiffness A₁₁…",
                           ["Increase", "Decrease", "Stay the same"], index=None, horizontal=True)
-    if st.button("Check my prediction"):
-        if prediction is None:
-            st.info("Choose a prediction first.")
-        elif prediction == "Decrease":
-            st.success("Correct. At 90°, the weaker transverse ply direction carries the x-load.")
-        else:
-            st.warning("Try the angle slider: x-aligned fibres resist x-tension much more strongly than transverse fibres for these materials.")
-    study_angle = st.slider("Rotate every ply [deg]", 0, 90, 0, 5, key="study_angle")
     study_load = np.array([100e3, 0, 0, 0, 0, 0], dtype=float)
     study = [assess_design(f"{a}°", f"[{a},{a}]s", ply_thickness_m, material, strengths, study_load)
              for a in range(0, 91, 10)]
+    endpoint_trend = ("Stay the same" if math.isclose(study[0].A11, study[-1].A11, rel_tol=1e-9)
+                      else "Increase" if study[-1].A11 > study[0].A11 else "Decrease")
+    if st.button("Check my prediction"):
+        if prediction is None:
+            st.info("Choose a prediction first.")
+        elif prediction == endpoint_trend:
+            st.success(f"Correct for the current material inputs: A₁₁ will {endpoint_trend.lower()} between the 0° and 90° endpoints.")
+        else:
+            st.warning(f"For the current material inputs, the endpoint answer is: {endpoint_trend}. Inspect the curve; intermediate angles need not vary monotonically.")
+    study_angle = st.slider("Rotate every ply [deg]", 0, 90, 0, 5, key="study_angle")
     current_study = assess_design(f"{study_angle}°", f"[{study_angle},{study_angle}]s",
                                   ply_thickness_m, material, strengths, study_load)
     st.caption("Controlled comparison: four plies of equal thickness, the selected material, and fixed Nx = 100 kN/m. Sidebar loads do not change this teaching experiment.")
@@ -366,8 +368,7 @@ with tabs[0]:
                  alt.Tooltip("ex_microstrain:Q", title="εx⁰ [µε]", format=".0f")]
     ).properties(height=270), width="stretch")
     st.markdown("**Trace the cause:** fibre direction → Q̄ of each ply → laminate A → compliance a = A⁻¹ → εx = a₁₁·Nx. "
-                "In the off-axis stacks [θ,θ]s every ply has the same +θ, so the laminate also shears under Nx (A₁₆ ≠ 0) "
-                "and εx grows faster than 1/A₁₁ alone suggests.")
+                "Off-axis stacks can couple extension and shear through A₁₆/A₂₆. The strain depends on the full compliance matrix, not on 1/A₁₁ alone.")
 
 with tabs[1]:
     st.subheader("Material → reduced stiffness Q")
@@ -377,7 +378,7 @@ with tabs[1]:
         st.markdown(f"**Source for elastic and strength inputs:** [{selected.reference}]({selected.source_url})")
         st.caption(selected.reference_note)
     else:
-        st.warning("Custom values have no recorded source. Cite your data before making engineering claims from them.")
+        st.warning("Custom values are UNSOURCED. Cite your data before making engineering claims from them.")
     nu21 = v12 * material["E2"] / material["E1"]
     q = compute_Q_matrix(material["E1"], material["E2"], material["G12"], material["v12"])
     st.metric("Minor Poisson ratio ν₂₁", f"{nu21:.5f}")
@@ -388,7 +389,7 @@ with tabs[1]:
         st.latex(r"\nu_{21}=\nu_{12}E_2/E_1,\qquad \Delta=1-\nu_{12}\nu_{21}")
         st.latex(r"Q_{11}=E_1/\Delta,\quad Q_{22}=E_2/\Delta,\quad Q_{12}=\nu_{12}E_2/\Delta,\quad Q_{66}=G_{12}")
         st.write("Q links local plane stress [σ₁, σ₂, τ₁₂] to local strain [ε₁, ε₂, γ₁₂]. γ₁₂ is engineering shear strain.")
-    st.write("Prediction: raising E₁ increases Q₁₁ most strongly. It does not automatically increase bending stiffness equally for every layup because ply position also matters.")
+    st.write("Q follows the entered elastic properties and the plane-stress denominator Δ. Inspect the calculated matrix when changing a value; bending stiffness also depends on ply orientation and position.")
 
 with tabs[2]:
     st.subheader("Orientation and laminate builder")
@@ -402,7 +403,7 @@ with tabs[2]:
     orientation = pd.DataFrame([{"Angle": f"{a}°", "Q̄11 [GPa]": transform_Q(q, a)[0, 0] / 1e9,
                                  "Q̄22 [GPa]": transform_Q(q, a)[1, 1] / 1e9} for a in (0, 45, 90)])
     st.dataframe(orientation, width="stretch", hide_index=True, column_config=fmt(orientation, "%.2f"))
-    st.write("Prediction: Q̄₁₁ falls as fibres rotate from 0° toward 90° for these reference materials.")
+    st.write("Compare Q̄₁₁ at 0°, 45° and 90° for the current properties. Edited elastic or shear properties can reverse the endpoint trend or produce a nonmonotonic curve.")
     st.markdown("**Ready-made layups** (they set every ply to the sidebar material)")
     preset_cols = st.columns(len(LAYUP_PRESETS))
     for column, (label, text) in zip(preset_cols, LAYUP_PRESETS.items()):
@@ -455,7 +456,7 @@ with tabs[2]:
         st.altair_chart(stack_plot(stiffness.z, st.session_state.plies, MATERIAL_NAMES), width="stretch")
     with st.expander("In plain words: what do these numbers mean?"):
         st.markdown("- **Q** describes one ply with the fibres along its own 1-axis. **Q̄** is the same ply seen from the laminate's x-axis after rotating it by its angle.\n"
-                    "- At 0° the ply is stiff along x; at 90° it is soft along x and stiff along y. At ±45° it resists shear well.\n"
+                    "- At 0° direction 1 aligns with x; at 90° it aligns with y. Which is stiffer follows the entered properties; ±45° plies transform normal and shear response together.\n"
                     "- Off-axis plies get non-zero Q̄₁₆/Q̄₂₆: pulling the ply also shears it. A **balanced** stack (each +θ matched by −θ) cancels this in A; "
                     "a **symmetric** stack makes B = 0. Bend–twist terms D₁₆/D₂₆ usually remain.")
 
@@ -509,7 +510,7 @@ with tabs[3]:
             st.write("D₁₆ and D₂₆ ≈ 0: no bend–twist coupling.")
         else:
             st.write(f"D₁₆/D₂₆ are nonzero (D₁₆/D₁₁ = {stiffness.D[0, 2] / stiffness.D[0, 0]:.3f}): bending also produces some twist. "
-                     "Balanced symmetric stacks with ±θ plies keep this term; \"quasi-isotropic\" describes A only, not D.")
+                     "Balance and symmetry alone do not force this term to zero; \"quasi-isotropic\" describes A only, not D.")
         with st.expander("In plain words: A, B and D"):
             st.markdown("- **A** is in-plane stiffness: how much force per unit width gives how much stretch. Bigger A₁₁ = stiffer along x.\n"
                         "- **B** couples stretching and bending. For a symmetric stack B = 0, so pulling does not bend the plate.\n"
@@ -615,6 +616,8 @@ with tabs[5]:
             st.markdown("**Thermal preload: cure cooling and cryogenic temperature**")
             st.caption("What this means: residual stress remains because bonded plies cannot expand independently. "
                        "Model assumption: one common stress-free temperature and constant properties, including at cryogenic inputs.")
+            if values_edited:
+                st.caption("Elastic and strength edits do not change the selected dataset's cited CTEs or reference-temperature provenance. This edited combination is not a calibrated material card.")
             active_materials = sorted({ply["mat"] for ply in st.session_state.plies})
             thermal_ready = all(thermal_records[index] is not None for index in active_materials)
             if not thermal_ready:
@@ -719,10 +722,13 @@ with tabs[5]:
                     st.dataframe(thermal_stress_frame, hide_index=True, width="stretch",
                                  height=table_height(len(thermal_stress_frame)),
                                  column_config=fmt(thermal_stress_frame, "%.3f"))
-                    critical_thermal = residual.ply_surfaces[thermal_index]
+                    control_note = "No controlling mechanical initiation face: no proportional mechanical load is applied. "
+                    if math.isfinite(thermal_factor):
+                        critical_thermal = residual.ply_surfaces[thermal_index]
+                        control_note = f"Control: ply {critical_thermal.ply}, {critical_thermal.surface.lower()} face, {thermal_criterion}. "
                     st.caption(
                         f"The thermal-preload factor holds residual stress fixed and scales only the sidebar mechanical loads; "
-                        f"control: ply {critical_thermal.ply}, {critical_thermal.surface.lower()} face, {thermal_criterion}. "
+                        + control_note +
                         "Both cases apply one ΔT to every ply; reference-to-final cooling uses the user-assumed common stress-free temperature. "
                         "Listed individual references are provenance, not a calibrated hybrid cure state."
                     )
@@ -809,6 +815,7 @@ with tabs[7]:
                                                   value=16, step=4, key="vessel_plies"))
     working_mpa = vessel_cols[2].number_input("Working pressure [MPa]", min_value=0.0, value=10.0, step=1.0, key="vessel_working")
     radius_m = radius_mm * 1e-3
+    st.caption("Wall plies controls the ±θ study, optimiser and dome. The current-layup cylinder check uses the separate ply table; the sidebar mechanical summary does not assess working pressure.")
     if wall_plies % 4:
         st.error("Use a multiple of 4 plies, so the ±θ wall is balanced and symmetric.")
     else:
@@ -874,7 +881,9 @@ with tabs[7]:
         check_cols[0].metric("First-ply failure pressure [MPa]", f"{current.first_ply_pressure_pa / 1e6:.2f}",
                              help=f"Ply {current.first_ply_ply}, {current.first_ply_surface.lower()} face; {current.first_ply_criterion} criterion; mode: {current.first_ply_mode.lower()}.")
         check_cols[1].metric("Fibre-only netting reference [MPa]", f"{current.netting_pressure_pa / 1e6:.2f}",
-                             help="Exact netting solution: fibre stresses between 0 and Xt that satisfy both axial and hoop equilibrium.")
+                             help="Fibre stresses between 0 and Xt satisfy axial and hoop equilibrium only; shear equilibrium and strain compatibility are not enforced.")
+        if not is_balanced(st.session_state.plies):
+            st.warning("Unbalanced wall: the netting reference enforces axial and hoop equilibrium only. Shear equilibrium is not enforced, so this number does not establish a feasible fibre-only wall under Nx=pR/2, Ny=pR, Nxy=0.")
         if working_mpa > 0:
             check_cols[2].metric("Netting / working pressure", f"{current.netting_pressure_pa / 1e6 / working_mpa:.2f}")
         if current.netting_pressure_pa <= 0:
@@ -943,7 +952,7 @@ with tabs[7]:
             mark_frame = pd.DataFrame(marks, columns=["limit", "pressure", "color"])
             progressive_chart = alt.layer(
                 alt.Chart(curve).mark_line(color=PALETTE["response"], strokeWidth=3).encode(
-                    x=alt.X("strain:Q", title="Hoop strain εy [%]", scale=alt.Scale(domainMin=0)),
+                    x=alt.X("strain:Q", title="Linear-model hoop strain εy [%]", scale=alt.Scale(domainMin=0)),
                     y=alt.Y("pressure:Q", title="Pressure [MPa]", scale=alt.Scale(domainMin=0)),
                     tooltip=[alt.Tooltip("strain:Q", title="εy [%]", format=".3f"), alt.Tooltip("pressure:Q", title="p [MPa]", format=".2f")]),
                 alt.Chart(mark_frame).mark_rule(strokeDash=[5, 4]).encode(
@@ -953,6 +962,7 @@ with tabs[7]:
             ).resolve_scale(color="independent")
             progressive_chart = alt.layer(progressive_chart, failure_event_chart(event_frame)).resolve_scale(color="independent").properties(height=330)
             st.altair_chart(progressive_chart, width="stretch")
+            st.warning("This is a linear-model pressure–strain history, not a physical burst/deformation curve. Residual stiffness can generate very large strains outside small-strain CLT; those strains are model extrapolation, not validated deformation.")
             if build_pdf_report is not None:
                 vessel_pdf = build_pdf_report(
                     material_name=st.session_state.material_choice + (" (edited values)" if values_edited else ""),

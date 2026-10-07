@@ -56,6 +56,7 @@ Unidirectional stack recovers E1/E2/G12/nu12; quasi-isotropic Ex=Ey and Gxy=Ex/(
 - R0 current verification (7 October 2026): 146/146 tests pass, 0 skipped with streamlit and reportlab installed. Audit: verification/AUDIT_R0.md.
 
 ## v4 refinement evidence
+Professor pass: current suite 163 passed, 0 skipped. Edited-card quiz endpoint answers, zero mechanical load with thermal stress, unbalanced netting qualification and PDF input/extrapolation statements are covered. Previous v4 counts below are historical baselines.
 - Current suite: 161 passed, 0 skipped; command and result in verification/qa_results.json and qa_test_log.txt.
 - AppTest grid renders all eleven existing tabs for every material dataset, load preset and layup preset; one ply, zero working pressure and missing custom CTE are exercised.
 - Direct thermal imports also render with a cached core package missing its new aggregate thermal exports (regression for the live ImportError scenario; live outcome requires deployment verification).

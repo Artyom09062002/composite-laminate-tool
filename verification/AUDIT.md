@@ -30,6 +30,14 @@ Completion audit: all mandatory AI stages R0b, R1-R5, G2 and R7 have the file/te
 
 ## Earlier verified mechanics
 
+## Professor-facing follow-up
+
+`verification/PROFESSOR_PASS.md` records nine confirmed interpretation/input-reporting findings and their fixes. The operating route is `DEMO_ROUTE.md`; limitations are in `LIMITS_BEFORE_SHOW.md`. They are technical guides, not the user's personal A1-A5 deliverables. The quiz reuses the existing angle study and follows its 0/90 endpoints. Mechanical summary, thermal no-load face, edited-card provenance, unbalanced netting and large-strain extrapolation are qualified explicitly. The PDF now prints actual sidebar elastic and strength inputs.
+
+Current suite: 163 passed, zero skipped, including unchanged snapshot and the extended PDF page/value checks. Core, material/source records, validation numbers and dependencies remain unchanged. Visual QA confirmed the revised sample remains one page without clipping. Native browser/live evidence is refreshed for the follow-up deployment; previous v4 records above retain their historical counts.
+
+## Earlier benchmark details
+
 - `Q̄(0°) = Q`; the 30° glass/epoxy `Q̄` agrees with the closed-form transformation (`verification/benchmark.py`).
 - Ply interfaces run from `−h/2` to `+h/2`; stresses are recovered at both faces of every ply from `ε(z) = ε⁰ + zκ`.
 - Symmetric stacks give `B ≈ 0`; reversing a stack keeps `A` and `D` and flips the sign of `B`.

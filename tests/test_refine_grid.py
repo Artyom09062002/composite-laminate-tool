@@ -51,5 +51,28 @@ class RefineGridTests(unittest.TestCase):
         self.clean(app)
         self.assertTrue(any('UNSOURCED' in e.value for e in app.warning))
 
+    def test_prediction_follows_edited_material_endpoints(self):
+        app = AppTest.from_file(str(Path(__file__).resolve().parents[1]/'app.py'),default_timeout=120).run()
+        for e1,e2,answer in ((10.,20.,'Increase'),(10.,10.,'Stay the same'),(181.,10.3,'Decrease')):
+            with self.subTest(answer=answer):
+                app.number_input(key='material_e1').set_value(e1).run()
+                app.number_input(key='material_e2').set_value(e2).run()
+                app.radio[0].set_value(answer).run()
+                next(b for b in app.button if b.label=='Check my prediction').click().run()
+                self.clean(app)
+                self.assertTrue(any('Correct for the current material inputs' in s.value for s in app.success))
+
+    def test_zero_mechanical_load_and_unbalanced_netting_are_qualified(self):
+        app = AppTest.from_file(str(Path(__file__).resolve().parents[1]/'app.py'),default_timeout=120).run()
+        app.number_input(key='load_nx').set_value(0).run()
+        self.clean(app)
+        self.assertTrue(any('Thermal residual stress is assessed separately' in x.value for x in app.info))
+        self.assertTrue(any('No controlling mechanical initiation face' in x.value for x in app.caption))
+        app.session_state['plies'] = [{'theta':54.735610317245346,'t':.000125,'mat':0}]*4
+        app.run()
+        self.clean(app)
+        self.assertTrue(any('Shear equilibrium is not enforced' in x.value for x in app.warning))
+        self.assertTrue(any('outside small-strain CLT' in x.value for x in app.warning))
+
 if __name__ == '__main__':
     unittest.main()

@@ -18,6 +18,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from presentation import progressive_frames, validation_status
 from ui_theme import APP_VERSION, PALETTE, MODE_COLOURS
+from workflow import is_balanced
 
 FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 APP_URL = "https://composite-laminate-tool.streamlit.app/"
@@ -97,7 +98,7 @@ def pressure_strain_drawing(progressive, font):
     for fraction in (0, .5, 1):
         drawing.add(String(x0+w*fraction, y0-12, f"{xmax*fraction:.3g}", fontName=font, fontSize=7, textAnchor="middle"))
         drawing.add(String(x0-6, y0+h*fraction, f"{ymax*fraction:.3g}", fontName=font, fontSize=7, textAnchor="end"))
-    drawing.add(String(x0+w/2, 8, "Hoop strain [%]", fontName=font, fontSize=8, textAnchor="middle"))
+    drawing.add(String(x0+w/2, 8, "Linear-model hoop strain [%]", fontName=font, fontSize=8, textAnchor="middle"))
     drawing.add(String(3, 150, "Pressure [MPa]", fontName=font, fontSize=8))
     for i, mode in enumerate(events.Mode.unique()):
         drawing.add(String(100+(i%2)*220, 175-(i//2)*12, mode,
@@ -133,6 +134,8 @@ def build_pdf_report(*, material_name, material, strengths, layup, material_name
     heading("Inputs and load cases")
     h = float(stiffness.z[-1]-stiffness.z[0])
     text(f"<b>Material:</b> {escape(material_name)}. {len(layup)} physical plies; thickness {h*1e3:.4g} mm.")
+    text("Sidebar elastic inputs: E1=" + f"{material['E1']/1e9:.6g}, E2={material['E2']/1e9:.6g}, G12={material['G12']/1e9:.6g} GPa; nu12={material['v12']:.6g}.", "small")
+    text("Sidebar strengths [MPa]: " + "; ".join(f"{name}={getattr(strengths,name)/1e6:.6g}" for name in ("Xt","Xc","Yt","Yc","S")) + ". Other ply materials use their named reference cards.", "small")
     # Run-length encoding keeps the full physical sequence readable at 40 and 100 plies.
     groups = []
     uniform = len({(p['t'], p['mat']) for p in layup}) == 1
@@ -176,8 +179,10 @@ def build_pdf_report(*, material_name, material, strengths, layup, material_name
                [f"{current.first_ply_pressure_pa/1e6:.4f}", f"{progressive.first_ply_load_factor/1e6:.4f}",
                 f"{progressive.last_ply_load_factor/1e6:.4f}", f"{current.netting_pressure_pa/1e6:.4f}"]], [45*mm]*4)
         text("First-ply marks calculated initiation. Last-ply is the assumed algorithm stop, <b>not an ultimate or burst load</b>. Netting is a separate fibre-only equilibrium reference.", "small")
+        if not is_balanced(layup):
+            text("Unbalanced wall: netting enforces axial/hoop equilibrium only, not shear equilibrium. It does not establish a feasible complete fibre-only pressure wall.", "small")
         story.append(pressure_strain_drawing(progressive, regular))
-        text("Points: initiation modes before stiffness reduction; jumps: redistribution at held pressure. This is not a stability analysis.", "small")
+        text("Points: initiation before stiffness reduction; jumps: redistribution at held pressure. Large strains are linear-model extrapolation outside small-strain CLT, not validated deformation. No stability analysis.", "small")
     heading("Limits and validation")
     text(validation_status(), "small")
     text("Model assumptions: plane stress, perfect bonding, thin-plate CLT; Tsai-Wu interaction F12 is assumed. " +
