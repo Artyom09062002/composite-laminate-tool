@@ -12,11 +12,43 @@ i.e. theta = 54.74 deg.
 Reference: e.g. Peters (ed.), "Composite Filament Winding", ASM International (2011);
 any composites text treating netting analysis of filament-wound cylinders.
 """
+from dataclasses import dataclass
 import math
 
 import numpy as np
 
+from .failure import evaluate_failure, first_ply_limit
+from .laminate import assemble_laminate_stiffness
+from .response import recover_ply_surfaces
+
 NETTING_ANGLE_DEG = math.degrees(math.atan(math.sqrt(2.0)))
+
+
+@dataclass(frozen=True)
+class FirstPly:
+    """First-ply (CLT) failure of a wall under a unit load: pressure, location, criterion, mode."""
+    pressure_pa: float
+    ply: int
+    surface: str
+    criterion: str
+    mode: str
+
+
+def first_ply_under_unit_load(layup: list[dict], materials: list[dict], strengths, unit_loads: np.ndarray) -> FirstPly:
+    """First-ply failure pressure of a wall whose unit-pressure resultants are ``unit_loads``.
+
+    The CLT response is linear, so the first-ply load factor of the unit-pressure load case
+    is the first-ply pressure in Pa. Shared by the cylinder (``cylinder_resultants(1, R)``) and
+    the dome stations (``dome_resultants(1, r1, r2)``); ``strengths`` holds one StrengthAllowables
+    per material, indexed like ``ply["mat"]``.
+    """
+    stiffness = assemble_laminate_stiffness(layup, materials)
+    response = recover_ply_surfaces(stiffness, layup, materials, unit_loads)
+    surface_strengths = [strengths[layup[p.ply - 1]["mat"]] for p in response.ply_surfaces]
+    index, factor, criterion = first_ply_limit(response.ply_surfaces, surface_strengths)
+    point = response.ply_surfaces[index]
+    mode = evaluate_failure(point.local_stress, surface_strengths[index]).maximum_stress_mode
+    return FirstPly(factor, point.ply, point.surface, criterion, mode)
 
 
 def cylinder_resultants(pressure_pa: float, radius_m: float) -> np.ndarray:

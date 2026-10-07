@@ -11,7 +11,8 @@ import re
 import numpy as np
 
 from core import StrengthAllowables, assemble_laminate_stiffness, evaluate_failure, recover_ply_surfaces, tsai_wu_load_factor
-from core.vessel import cylinder_resultants, netting_bound, netting_pressure
+from core.failure import first_ply_limit  # noqa: F401  (defined in core; re-exported here for the UI and existing tests)
+from core.vessel import cylinder_resultants, first_ply_under_unit_load, netting_bound, netting_pressure
 
 
 def parse_layup(text: str, thickness_m: float) -> list[dict]:
@@ -95,29 +96,6 @@ def is_balanced(layup: list[dict]) -> bool:
                for (angle, mat), value in by_angle.items())
 
 
-def first_ply_limit(surfaces, strengths):
-    """Return ``(index, load_factor, criterion)`` of the first ply surface to reach a limit.
-
-    ``load_factor`` is the proportional multiplier on the entered load vector at which
-    Maximum Stress or Tsai-Wu first reaches 1 (``math.inf`` when nothing is loaded).
-    ``index`` is the position in ``surfaces``; criterion is "No load" when unbounded.
-    ``strengths`` is one StrengthAllowables for all surfaces, or a list with one per surface
-    (hybrid laminates, where each ply's material has its own allowables).
-    """
-    per_surface = (list(strengths) if isinstance(strengths, (list, tuple))
-                   else [strengths] * len(surfaces))
-    thresholds = []
-    for point, allow in zip(surfaces, per_surface):
-        util = evaluate_failure(point.local_stress, allow).maximum_stress_utilization
-        thresholds.append((1 / util if util else math.inf,
-                           tsai_wu_load_factor(point.local_stress, allow)))
-    index = min(range(len(thresholds)), key=lambda i: min(thresholds[i]))
-    factor = min(thresholds[index])
-    if not math.isfinite(factor):
-        return index, factor, "No load"
-    return index, factor, ("Maximum Stress" if thresholds[index][0] <= thresholds[index][1] else "Tsai–Wu")
-
-
 @dataclass(frozen=True)
 class DesignSummary:
     name: str
@@ -185,15 +163,10 @@ def screen_cylinder(layup: list[dict], materials: list[dict], strengths, radius_
     unit-pressure load case. ``strengths`` is one StrengthAllowables per material in
     ``materials`` (same indexing as ``ply["mat"]``).
     """
-    stiffness = assemble_laminate_stiffness(layup, materials)
     unit = cylinder_resultants(1.0, radius_m)
-    response = recover_ply_surfaces(stiffness, layup, materials, unit)
-    surface_strengths = [strengths[layup[p.ply - 1]["mat"]] for p in response.ply_surfaces]
-    index, factor, criterion = first_ply_limit(response.ply_surfaces, surface_strengths)
-    point = response.ply_surfaces[index]
-    mode = evaluate_failure(point.local_stress, surface_strengths[index]).maximum_stress_mode
+    first_ply = first_ply_under_unit_load(layup, materials, strengths, unit)
     fibre_x = [strengths[ply["mat"]].Xt for ply in layup]
-    return VesselScreening(factor, point.ply, point.surface, criterion, mode,
+    return VesselScreening(first_ply.pressure_pa, first_ply.ply, first_ply.surface, first_ply.criterion, first_ply.mode,
                            netting_pressure(layup, fibre_x, radius_m), netting_bound(layup, fibre_x, radius_m))
 
 

@@ -13,6 +13,7 @@ from core import (
     StrengthAllowables, assemble_laminate_stiffness, compute_Q_matrix, engineering_constants,
     evaluate_failure, recover_ply_surfaces, transform_Q, tsai_wu_load_factor,
 )
+from core.dome import cylinder_winding_angle_deg, dome_stations
 from core.vessel import NETTING_ANGLE_DEG
 from examples.spar_cap import MATERIAL_SOURCE, analyze_spar_cap
 from materials import DEFAULT_MATERIALS
@@ -693,7 +694,82 @@ with tabs[7]:
                        "Add hoop (90°) or low-angle helical plies.")
         st.caption(f"Current layup ({len(st.session_state.plies)} plies, h = {current_wall:.2f} mm), each ply with its own material. "
                    "Hoop (90°) plies carry Ny and low-angle helical plies carry Nx; try [90,15,-15,90]s against [55,-55,55,-55]s.")
-    st.info("**Model limits.** Cylindrical section only (no domes, bosses or end-fittings), thin-wall membrane resultants, no liner, "
+    st.divider()
+    st.markdown("**Dome: geodesic winding into the polar opening**")
+    st.write("On a dome the fibres follow geodesics, so the polar opening r₀ fixes the winding angle: α₀ = asin(r₀/R) on the cylinder, "
+             "rising to 90° at the opening (angles from the meridian, as above). The dome wall is the ±α₀ wall (same plies and sidebar "
+             "material) carried over the dome. It thickens toward the pole, and the membrane resultants follow the dome curvature "
+             "(r₁ meridional, r₂ circumferential radius).")
+    st.latex(r"r\sin\alpha=r_0,\quad t(r)=t_{cyl}\frac{R\cos\alpha_0}{r\cos\alpha},\quad "
+             r"N_\varphi=\frac{p\,r_2}{2},\quad N_\theta=p\,r_2\Bigl(1-\frac{r_2}{2r_1}\Bigr)")
+    if wall_plies % 4:
+        st.info("Use a multiple of 4 wall plies above to evaluate the dome.")
+    else:
+        dome_cols = st.columns(3)
+        dome_r0_ratio = dome_cols[0].number_input("Polar opening ratio r₀ / R", min_value=0.05, max_value=0.95, value=0.5,
+                                                  step=0.05, key="dome_r0_ratio")
+        dome_aspect = dome_cols[1].number_input("Dome depth / R (1 = hemisphere, 0.5 = 2:1 ellipsoid)", min_value=0.3, max_value=1.2,
+                                                value=1.0, step=0.05, key="dome_aspect")
+        dome_r0 = dome_r0_ratio * radius_m
+        dome_alpha0 = cylinder_winding_angle_deg(dome_r0, radius_m)
+        dome_cols[2].metric("Cylinder winding angle α₀", f"±{dome_alpha0:.1f}°",
+                            help="asin(r₀/R). Hoop plies are not geodesic and are not part of this dome wall.")
+        dome_layup = angle_ply_wall(dome_alpha0, wall_plies, ply_thickness_m)
+        try:
+            dome_result = dome_stations(dome_layup, [material], [strengths], dome_r0, radius_m, aspect_ratio=dome_aspect)
+        except ValueError as error:
+            st.error(str(error))
+        else:
+            dome_cyl_mpa = screen_cylinder(dome_layup, [material], [strengths], radius_m).first_ply_pressure_pa / 1e6
+            dome_frame = pd.DataFrame({"r": dome_result.radius_m * 1e3, "angle": dome_result.alpha_deg,
+                                       "thickness": dome_result.thickness_m * 1e3,
+                                       "first_ply": dome_result.first_ply_pressure_pa / 1e6})
+            weakest = int(np.argmin(dome_result.first_ply_pressure_pa))
+            dome_metrics = st.columns(3)
+            dome_metrics[0].metric("Wall thickness, cylinder → last station [mm]",
+                                   f"{dome_frame['thickness'].iloc[0]:.2f} → {dome_frame['thickness'].iloc[-1]:.1f}",
+                                   help="The last station is at r = 1.02·r₀: the model thickness is infinite at r₀.")
+            dome_metrics[1].metric("Weakest dome station, first-ply [MPa]", f"{dome_frame['first_ply'].iloc[weakest]:.2f}",
+                                   help=f"At r = {dome_frame['r'].iloc[weakest]:.0f} mm, ply {dome_result.first_ply_ply[weakest]}; "
+                                        f"mode: {dome_result.first_ply_mode[weakest].lower()}.")
+            dome_metrics[2].metric("Cylinder first-ply [MPa]", f"{dome_cyl_mpa:.2f}",
+                                   help="Same ±α₀ wall as a cylinder (Ny = pR), for comparison.")
+            dome_x = alt.X("r:Q", title="Parallel radius r [mm]  (cylinder → polar opening)", scale=alt.Scale(reverse=True))
+            angle_line = alt.Chart(dome_frame).mark_line(color="#087f8c", strokeWidth=3).encode(
+                x=dome_x, y=alt.Y("angle:Q", title="Winding angle α [deg]", scale=alt.Scale(domain=[0, 90]),
+                                  axis=alt.Axis(titleColor="#087f8c")),
+                tooltip=[alt.Tooltip("r:Q", title="r [mm]", format=".1f"), alt.Tooltip("angle:Q", title="α [deg]", format=".1f")])
+            thickness_line = alt.Chart(dome_frame).mark_line(color="#e07b22", strokeWidth=3).encode(
+                x=dome_x, y=alt.Y("thickness:Q", title="Wall thickness [mm]", scale=alt.Scale(domainMin=0),
+                                  axis=alt.Axis(titleColor="#e07b22", orient="right")),
+                tooltip=[alt.Tooltip("r:Q", title="r [mm]", format=".1f"), alt.Tooltip("thickness:Q", title="t [mm]", format=".2f")])
+            fp_layers = [alt.Chart(dome_frame).mark_line(color="#3b6fb6", strokeWidth=3).encode(
+                             x=dome_x, y=alt.Y("first_ply:Q", title="First-ply pressure [MPa]", scale=alt.Scale(domainMin=0)),
+                             tooltip=[alt.Tooltip("r:Q", title="r [mm]", format=".1f"),
+                                      alt.Tooltip("first_ply:Q", title="p first-ply [MPa]", format=".2f")]),
+                         alt.Chart(pd.DataFrame({"y": [dome_cyl_mpa]})).mark_rule(strokeDash=[5, 4], color="#5b7080").encode(y="y:Q")]
+            if working_mpa > 0:
+                fp_layers.append(alt.Chart(pd.DataFrame({"y": [working_mpa]})).mark_rule(color="#c0392b").encode(y="y:Q"))
+            chart_cols = st.columns(2)
+            chart_cols[0].altair_chart(alt.layer(angle_line, thickness_line).resolve_scale(y="independent").properties(height=300),
+                                       width="stretch")
+            chart_cols[1].altair_chart(alt.layer(*fp_layers).properties(height=300), width="stretch")
+            st.caption("Left: winding angle (teal) and wall thickness (orange). Right: first-ply pressure of the wall at each station; "
+                       "dashed grey = the same ±α₀ wall as a cylinder" + ("; red = working pressure." if working_mpa > 0 else "."))
+            junction_ratio = dome_result.n_theta[0] / radius_m
+            dome_text = (f"Clairaut's relation turns the fibres from α₀ = {dome_alpha0:.1f}° toward the hoop direction at the opening, and the "
+                         "constant band width makes the wall thicken as 1/(r cos α). The weakest station "
+                         f"(r = {dome_frame['r'].iloc[weakest]:.0f} mm, {dome_result.first_ply_mode[weakest].lower()}) is where the helical plies "
+                         "carry the dome loads worst. At the junction the dome hoop resultant is "
+                         f"{junction_ratio:.2f}·pR against pR in the cylinder, so the membrane hoop load jumps there; "
+                         "a real vessel smooths this with bending and local geometry, which this model does not include. ")
+            if float(dome_result.n_theta.min()) < 0:
+                dome_text += "For this depth N_θ is negative near the equator (depth below about 0.71·R): the hoop direction is in compression. "
+            st.markdown("**How to read it.** " + dome_text)
+            st.caption("Dome model limits: helical plies only (no hoop plies, boss or liner), no fibre slippage, constant band width and fibre "
+                       "volume fraction, membrane theory (no bending). The isotensoid profile is not included.")
+    st.info("**Model limits.** The cylinder checks cover the cylindrical section only; the dome part above models the helical plies alone "
+            "(no bosses, end-fittings or slippage), thin-wall membrane resultants, no liner, "
             "no residual or thermal stresses. Netting ignores the matrix; for hybrid walls it is an upper estimate because fibres of "
             "different stiffness do not reach their strengths together. Real tank burst also depends on dome design, winding quality and progressive damage.")
 

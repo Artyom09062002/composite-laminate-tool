@@ -71,3 +71,29 @@ def _stress_vector(stress: np.ndarray) -> np.ndarray:
     if values.shape != (3,) or not np.all(np.isfinite(values)):
         raise ValueError("Stress must be three finite values [sigma1, sigma2, tau12] in Pa")
     return values
+
+
+def first_ply_limit(surfaces, strengths):
+    """Return ``(index, load_factor, criterion)`` of the first ply surface to reach a limit.
+
+    ``load_factor`` is the proportional multiplier on the entered load vector at which
+    Maximum Stress or Tsai-Wu first reaches 1 (``math.inf`` when nothing is loaded).
+    ``index`` is the position in ``surfaces``; criterion is "No load" when unbounded.
+    ``strengths`` is one StrengthAllowables for all surfaces, or a list with one per surface
+    (hybrid laminates, where each ply's material has its own allowables).
+
+    Moved here from ``workflow`` unchanged so that ``core.vessel`` and ``core.dome`` can use it
+    without importing the UI-side module; ``workflow.first_ply_limit`` still resolves to this function.
+    """
+    per_surface = (list(strengths) if isinstance(strengths, (list, tuple))
+                   else [strengths] * len(surfaces))
+    thresholds = []
+    for point, allow in zip(surfaces, per_surface):
+        util = evaluate_failure(point.local_stress, allow).maximum_stress_utilization
+        thresholds.append((1 / util if util else math.inf,
+                           tsai_wu_load_factor(point.local_stress, allow)))
+    index = min(range(len(thresholds)), key=lambda i: min(thresholds[i]))
+    factor = min(thresholds[index])
+    if not math.isfinite(factor):
+        return index, factor, "No load"
+    return index, factor, ("Maximum Stress" if thresholds[index][0] <= thresholds[index][1] else "Tsai–Wu")
