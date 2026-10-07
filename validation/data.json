@@ -1,8 +1,9 @@
 {
   "_meta": {
-    "task": "C1",
+    "task": "C1 vessel validation and C5 thermal material provenance",
     "created": "2026-10-07",
-    "rule": "All numbers are as published in the PASTED ChatGPT text, which is UNVERIFIED input. No gap filled from memory. UNSOURCED = missing in pasted text.",
+    "rule": "C1 vessel-case numbers are as published in the PASTED ChatGPT text, which is UNVERIFIED input. No gap filled from memory. UNSOURCED = missing in pasted text.",
+    "thermal_rule": "C5 thermal_materials values are recorded from the cited linked sources; conversions to deg C are labelled derived.",
     "strict_usable_cases": [],
     "strict_criterion": "geometry AND layup AND lamina properties AND measured burst all given -> NO case passes: inner radius is NOT REPORTED in all four sources.",
     "conditional_cases_included": "Included with UNSOURCED markers so the missing items are explicit; do not use for validation until the listed gaps are closed from original PDFs.",
@@ -11,6 +12,42 @@
       "Part-1 lamina-only datasets (T300/5208, E-glass/epoxy, T700/epoxy): no vessel, no burst"
     ],
     "units": "as published per field; derived SI values labelled as derived"
+  },
+  "thermal_materials": {
+    "T300_5208": {
+      "status": "SOURCED",
+      "alpha1": {"value": 0.02, "unit": "um/(m K)", "source": "York (2015), Table 2"},
+      "alpha2": {"value": 22.5, "unit": "um/(m K)", "source": "York (2015), Table 2"},
+      "alpha12": {"value": 0.0, "unit": "um/(m K)", "source": "Principal material axes by definition"},
+      "reference_temperature": {
+        "value": 250,
+        "unit": "deg F",
+        "derived_deg_C": 121.11111111111111,
+        "source": "Kriz, Stinchcomb & Tenney, NASA-CR-162921 (1980)",
+        "note": "Measured stress-free range was 250-300 deg F and 250 deg F was selected for the report's residual-stress analysis; nominal cure was 350 deg F."
+      },
+      "references": [
+        {"citation": "C. B. York, Influence of Bending-Twisting Coupling on Compression Buckling Strength (2015), Table 2.", "url": "https://eprints.gla.ac.uk/105827/1/105827.pdf"},
+        {"citation": "Kriz, Stinchcomb & Tenney, Effects of moisture, residual thermal curing stresses and mechanical load on the damage development in quasi-isotropic laminates, NASA-CR-162921 (1980).", "url": "https://ntrs.nasa.gov/citations/19800012968"}
+      ]
+    },
+    "SCOTCHPLY_1002": {
+      "status": "SOURCED",
+      "alpha1": {"value": 8.6, "unit": "um/(m K)", "source": "York (2015), Table 2"},
+      "alpha2": {"value": 22.1, "unit": "um/(m K)", "source": "York (2015), Table 2"},
+      "alpha12": {"value": 0.0, "unit": "um/(m K)", "source": "Principal material axes by definition"},
+      "reference_temperature": {
+        "value": 330,
+        "unit": "deg F",
+        "derived_deg_C": 165.55555555555554,
+        "source": "3M Scotchply Reinforced Plastic Type 1002 technical data, section 1.8",
+        "note": "Manufacturer press-cure temperature; no measured stress-free temperature was found, so cure temperature is used as the reference."
+      },
+      "references": [
+        {"citation": "C. B. York, Influence of Bending-Twisting Coupling on Compression Buckling Strength (2015), Table 2.", "url": "https://eprints.gla.ac.uk/105827/1/105827.pdf"},
+        {"citation": "3M, Scotchply Reinforced Plastic Type 1002 technical data, section 1.8 cure cycles.", "url": "https://digital.library.unt.edu/ark:/67531/metadc1064666/m2/1/high_res_d/5389797.pdf"}
+      ]
+    }
   },
   "cases": [
     {

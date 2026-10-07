@@ -11,7 +11,8 @@ import streamlit as st
 
 from core import (
     StrengthAllowables, assemble_laminate_stiffness, compute_Q_matrix, engineering_constants,
-    evaluate_failure, hashin, recover_ply_surfaces, transform_Q, tsai_wu_load_factor,
+    evaluate_failure, first_ply_mechanical_load_factor, hashin, recover_ply_surfaces,
+    recover_thermal_response, temperature_change_from_reference, transform_Q, tsai_wu_load_factor,
 )
 from core.dome import cylinder_winding_angle_deg, dome_stations
 from core.progressive import DegradationRules, progressive_failure
@@ -216,14 +217,17 @@ with st.sidebar:
         shear = st.number_input("S [MPa]", min_value=0.001, key="strength_s")
 
 material = {"E1": e1 * 1e9, "E2": e2 * 1e9, "G12": g12 * 1e9, "v12": v12}
+if selected is not None:
+    material.update(alpha1=selected.alpha1, alpha2=selected.alpha2, alpha12=0.0)
 strengths = StrengthAllowables(*(value * 1e6 for value in (xt, xc, yt, yc, shear)))
 loads = np.array([nx * 1e3, ny * 1e3, nxy * 1e3, mx, my, mxy], dtype=float)
 ply_thickness_m = thickness_mm * 1e-3
 
 # Per-ply materials: index 0 is the sidebar material, the others are the cited datasets.
 MATERIAL_NAMES = ["Sidebar material", *DEFAULT_MATERIALS]
-materials_list = [material] + [record.as_core_material() for record in DEFAULT_MATERIALS.values()]
+materials_list = [material] + [record.as_thermal_core_material() for record in DEFAULT_MATERIALS.values()]
 strengths_list = [strengths] + [StrengthAllowables(**record.as_strengths()) for record in DEFAULT_MATERIALS.values()]
+thermal_records = [selected, *DEFAULT_MATERIALS.values()]
 
 values_edited = False
 if selected:
@@ -349,7 +353,7 @@ with tabs[1]:
     else:
         st.warning("Custom values have no recorded source. Cite your data before making engineering claims from them.")
     nu21 = v12 * material["E2"] / material["E1"]
-    q = compute_Q_matrix(**material)
+    q = compute_Q_matrix(material["E1"], material["E2"], material["G12"], material["v12"])
     st.metric("Minor Poisson ratio ν₂₁", f"{nu21:.5f}")
     st.caption("Q in GPa, material axes 1–2:")
     show_matrix(st, q, 1e9, ["1", "2", "12"], "%.2f")
@@ -573,6 +577,128 @@ with tabs[5]:
                         "- **Max Stress** checks the three directions separately. **Tsai–Wu** combines them in one quadratic expression, so stresses in different directions interact.\n"
                         "- **Load factor** answers: by how much can I multiply all loads before the first ply reaches its limit? Above 1 = spare capacity; below 1 = already beyond.\n"
                         "- This is first-ply screening. It does not model progressive damage.")
+
+        with st.container(border=True):
+            st.markdown("**Thermal preload: cure cooling and cryogenic temperature**")
+            active_materials = sorted({ply["mat"] for ply in st.session_state.plies})
+            thermal_ready = all(thermal_records[index] is not None for index in active_materials)
+            if not thermal_ready:
+                st.warning("Thermal results are unavailable for an UNSOURCED custom material. Select a cited material dataset before using this block.")
+            else:
+                thermal_rows = []
+                for index in active_materials:
+                    record = thermal_records[index]
+                    thermal_rows.append({
+                        "Material": MATERIAL_NAMES[index],
+                        "α₁ [µm/(m·K)]": record.alpha1 * 1e6,
+                        "α₂ [µm/(m·K)]": record.alpha2 * 1e6,
+                        "α₁₂ [µm/(m·K)]": 0.0,
+                        "Reference [°C]": record.thermal_reference_temperature_c,
+                        "Reference basis": record.thermal_reference_basis,
+                    })
+                thermal_frame = pd.DataFrame(thermal_rows)
+                st.dataframe(thermal_frame, hide_index=True, width="stretch",
+                             column_config={name: st.column_config.NumberColumn(name, format="%.3f")
+                                            for name in ("α₁ [µm/(m·K)]", "α₂ [µm/(m·K)]",
+                                                         "α₁₂ [µm/(m·K)]", "Reference [°C]")})
+
+                input_cols = st.columns(3)
+                thermal_case = input_cols[0].selectbox(
+                    "Thermal case",
+                    ["Direct ΔT", "Cool from reference to final temperature"],
+                    key="thermal_case",
+                )
+                direct_delta = input_cols[1].number_input(
+                    "ΔT [°C] (user-selected)", value=-100.0, step=10.0, key="thermal_delta_t"
+                )
+                final_temperature = input_cols[2].number_input(
+                    "Chosen final / cryogenic temperature [°C]", value=-196.0, step=10.0,
+                    key="thermal_final_temperature",
+                )
+                combine_mechanical = st.checkbox(
+                    "Add the sidebar mechanical loads to the displayed ply stresses",
+                    value=True, key="thermal_combine_mechanical",
+                )
+
+                if thermal_case == "Direct ΔT":
+                    temperature_changes = float(direct_delta)
+                    active_changes = [float(direct_delta)] * len(active_materials)
+                else:
+                    temperature_changes = np.zeros(len(materials_list), dtype=float)
+                    for index, record in enumerate(thermal_records):
+                        if record is not None:
+                            temperature_changes[index] = temperature_change_from_reference(
+                                record.thermal_reference_temperature_c, final_temperature
+                            )
+                    active_changes = [temperature_changes[index] for index in active_materials]
+
+                try:
+                    residual = recover_thermal_response(
+                        stiffness, st.session_state.plies, materials_list, temperature_changes
+                    )
+                    displayed = recover_thermal_response(
+                        stiffness, st.session_state.plies, materials_list, temperature_changes,
+                        loads if combine_mechanical else None,
+                    )
+                    thermal_index, thermal_factor, thermal_criterion = first_ply_mechanical_load_factor(
+                        residual, response, surface_strengths
+                    )
+                except (ValueError, np.linalg.LinAlgError) as error:
+                    st.error(f"Thermal case cannot be analysed: {error}")
+                else:
+                    direct_label = (f"{active_changes[0]:.1f}" if np.ptp(active_changes) < 1e-12
+                                    else f"{min(active_changes):.1f} to {max(active_changes):.1f}")
+                    residual_max = max(abs(point.local_stress[1]) for point in residual.ply_surfaces) / 1e6
+                    thermal_metrics = st.columns(3)
+                    thermal_metrics[0].metric("Active ΔT [°C]", direct_label)
+                    thermal_metrics[1].metric("Max residual |σ₂| [MPa]", f"{residual_max:.2f}")
+                    if math.isfinite(thermal_factor):
+                        factor_value = f"{thermal_factor:.3f}"
+                        factor_delta = (f"{thermal_factor / factor:.3f}× vs mechanical-only"
+                                        if math.isfinite(factor) and factor > 0 else None)
+                    else:
+                        factor_value, factor_delta = "No mechanical load", None
+                    thermal_metrics[2].metric("First-ply factor with thermal preload", factor_value,
+                                              delta=factor_delta, delta_color="off")
+
+                    thermal_stress_rows = []
+                    for residual_point, displayed_point in zip(residual.ply_surfaces, displayed.ply_surfaces):
+                        row = {
+                            "Ply": residual_point.ply,
+                            "Face": residual_point.surface,
+                            "Angle [deg]": residual_point.angle_deg,
+                            "Residual σ₁ [MPa]": residual_point.local_stress[0] / 1e6,
+                            "Residual σ₂ [MPa]": residual_point.local_stress[1] / 1e6,
+                            "Residual τ₁₂ [MPa]": residual_point.local_stress[2] / 1e6,
+                        }
+                        if combine_mechanical:
+                            row.update({
+                                "Combined σ₁ [MPa]": displayed_point.local_stress[0] / 1e6,
+                                "Combined σ₂ [MPa]": displayed_point.local_stress[1] / 1e6,
+                                "Combined τ₁₂ [MPa]": displayed_point.local_stress[2] / 1e6,
+                            })
+                        thermal_stress_rows.append(row)
+                    thermal_stress_frame = pd.DataFrame(thermal_stress_rows)
+                    st.dataframe(thermal_stress_frame, hide_index=True, width="stretch",
+                                 height=table_height(len(thermal_stress_frame)),
+                                 column_config=fmt(thermal_stress_frame, "%.3f"))
+                    critical_thermal = residual.ply_surfaces[thermal_index]
+                    st.caption(
+                        f"The thermal-preload factor holds residual stress fixed and scales only the sidebar mechanical loads; "
+                        f"control: ply {critical_thermal.ply}, {critical_thermal.surface.lower()} face, {thermal_criterion}. "
+                        "The direct case applies one ΔT to every ply; the reference-to-final case uses each material's listed reference temperature."
+                    )
+
+                cited_records = []
+                for index in active_materials:
+                    record = thermal_records[index]
+                    if record.name not in cited_records:
+                        cited_records.append(record.name)
+                        st.markdown(
+                            f"{record.name}: [CTE source]({record.cte_source_url}); "
+                            f"[reference-temperature source]({record.temperature_source_url})."
+                        )
+                st.caption("Moisture, creep, and temperature-dependent properties are not modelled. Cure chemistry and chemical shrinkage are also excluded.")
 
 with tabs[6]:
     st.subheader("Compare candidate layups under the current material and loads")
@@ -974,5 +1100,6 @@ with tabs[10]:
     st.dataframe(reference, hide_index=True, width="stretch", column_config=fmt(reference, "%.4f"))
     st.markdown("Independent worked example, [0/90]s T300/5208: [source and derivation](https://mpolyco.com/learn/classical-laminate-theory). Published values are rounded.")
     st.info("**Model limits.** Linear-elastic plies in plane stress, perfectly bonded, thin-plate (Kirchhoff) kinematics without transverse shear. "
-            "Not included: cure/thermal residual stresses (important for hybrids), progressive damage, interlaminar stresses, buckling and environmental effects. "
+            "Thermal residual stresses are calculated in the Failure tab's thermal block only; the other tabs and the general PDF use mechanical loading. "
+            "Not included in the thermal model: moisture, creep, temperature-dependent properties, interlaminar stresses and buckling. "
             "Strengths are literature values, not qualified allowables; Tsai–Wu F₁₂ is assumed.")
