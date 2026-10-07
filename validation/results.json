@@ -1,0 +1,933 @@
+{
+  "_meta": {
+    "task": "C4",
+    "date": "2026-10-07",
+    "code": "working tree on top of commit 9636114",
+    "input_status": "data.json is UNVERIFIED (pasted from a ChatGPT research answer); no original PDF was opened",
+    "tuning": "none: no parameter was adjusted to any measurement; 'sensitivity' runs change one input and are never the prediction",
+    "degradation_defaults": "E1 x0.01 after fibre failure, E2 and G12 x0.1 after matrix failure (assumptions, not material data)",
+    "transverse_shear": "St = Yc/(2 tan 53 deg) ASSUMED unless the source supplies it (Alam: S_T = 14 ksi from the pasted text)"
+  },
+  "cases": [
+    {
+      "id": "KANGAL_2020",
+      "data_status": "CONDITIONAL",
+      "model_scope": "cylinder wall, composite only (steel liner NOT modelled)",
+      "derivation": "Radius is DERIVED, not published: Table 1 labels its diameters only 'average'. (COPV diameter - liner diameter)/2 equals 12 x measured ply thickness (P1 GF: 2.50 vs 2.496 mm), so the liner diameter is the liner OUTER diameter. Composite inner radius = liner diameter/2; pressure acts on the liner bore, radius = liner diameter/2 - 4.5 mm wall.",
+      "runs": [
+        {
+          "label": "GF_P1 primary",
+          "kind": "primary",
+          "specimen": "GF_P1",
+          "measured_burst_bar": 919,
+          "measured_burst_mpa": 91.9,
+          "bare_liner_burst_bar": 622,
+          "paper_fe_bar": 953,
+          "ply_thickness_mm": 0.208,
+          "radius_pressure_mm": 65.625,
+          "radius_composite_inner_mm": 70.125,
+          "stack_inner_to_outer": [
+            11,
+            -11,
+            90,
+            90,
+            11,
+            -11,
+            90,
+            90,
+            11,
+            -11,
+            90,
+            90
+          ],
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 167.7681826065733,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.18255514973511786,
+            "netting_over_measured": 0.2636470329404875
+          },
+          "diagnostic_gain_over_bare_liner_bar": {
+            "using_mean_liner_657": 262,
+            "range_using_622_and_692": [
+              227,
+              297
+            ]
+          },
+          "diagnostic_netting_over_gain_mean_liner": 0.9247771880622444
+        },
+        {
+          "label": "GF_P1 sensitivity: radius = composite inner radius",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 17.698637258875753,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 17.6897523793255,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 157.00230992593754,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 226.74349771472674,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.019258582436208652,
+            "first_ply_hashin_over_measured": 0.019248914449755714,
+            "last_ply_over_measured": 0.17084038076815836,
+            "netting_over_measured": 0.2467285067624883
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: stack order [90,+11,-11,90]x3 (hoop plies on both sides of each helical pair)",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 22.34393218399598,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 11,
+            "first_ply_hashin_bar": 22.338129237166942,
+            "first_hashin_event": "ply 2 bottom face, Matrix tension",
+            "last_ply_bar": 243.389095284781,
+            "last_ply_over_first_ply_hashin": 10.895679432269644,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 18,
+            "cascade_steps": 8,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.024313310319908576,
+            "first_ply_hashin_over_measured": 0.02430699590551354,
+            "last_ply_over_measured": 0.2648412353479663,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: stack order [+11,-11]x3 then 90x6 (blocks)",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 13.06772552272548,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 13.053721573669543,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 63.85581297673043,
+            "last_ply_over_first_ply_hashin": 4.891770719664573,
+            "netting_bar": 242.291623272308,
+            "n_failure_events": 17,
+            "cascade_steps": 19,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.014219505465424897,
+            "first_ply_hashin_over_measured": 0.014204267218356412,
+            "last_ply_over_measured": 0.06948401847304725,
+            "netting_over_measured": 0.26364703294048747
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: ply thickness 0.2 mm (FE value) instead of measured",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.184863557196525,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.175734587548735,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 161.31556019862816,
+            "last_ply_over_first_ply_hashin": 8.875325474280263,
+            "netting_bar": 232.97271468491155,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.01978766437126934,
+            "first_ply_hashin_over_measured": 0.019777730780792965,
+            "last_ply_over_measured": 0.1755337978222287,
+            "netting_over_measured": 0.2535067624427764
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: Hashin St = S12 (assumed) instead of Yc/(2 tan 53)",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 167.7681826065733,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": false,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.18255514973511786,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: Hashin St = 0.5 S12 (assumed) instead of Yc/(2 tan 53)",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 167.7681826065733,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": false,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.18255514973511786,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: residual factors E1 0.001 / E2,G12 0.01",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 167.94864274755741,
+            "last_ply_over_first_ply_hashin": 8.88487223375208,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 18,
+            "cascade_steps": 19,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.18275151550332688,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: residual factors E1 0.1 / E2,G12 0.3",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 114.57999301707,
+            "last_ply_over_first_ply_hashin": 6.061547041086036,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 12,
+            "cascade_steps": 11,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.12467899131346027,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: residual factors 0.5 / 0.5 / 0.5",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 47.926178077169105,
+            "last_ply_over_first_ply_hashin": 2.535405835388273,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 12,
+            "cascade_steps": 10,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.052150356993655174,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P1 sensitivity: fibre failure also removes E2, G12 (x0.1)",
+          "kind": "sensitivity",
+          "specimen": "GF_P1",
+          "predicted": {
+            "first_ply_clt_bar": 18.912258099484387,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.902763971050682,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 167.7681826065733,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 242.29162327230804,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020579170946120117,
+            "first_ply_hashin_over_measured": 0.02056884001202468,
+            "last_ply_over_measured": 0.18255514973511786,
+            "netting_over_measured": 0.2636470329404875
+          }
+        },
+        {
+          "label": "GF_P2 primary",
+          "kind": "primary",
+          "specimen": "GF_P2",
+          "measured_burst_bar": 879,
+          "measured_burst_mpa": 87.9,
+          "bare_liner_burst_bar": 692,
+          "paper_fe_bar": 953,
+          "ply_thickness_mm": 0.199,
+          "radius_pressure_mm": 65.55,
+          "radius_composite_inner_mm": 70.05,
+          "stack_inner_to_outer": [
+            11,
+            -11,
+            90,
+            90,
+            11,
+            -11,
+            90,
+            90,
+            11,
+            -11,
+            90,
+            90
+          ],
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 160.69263111891374,
+            "last_ply_over_first_ply_hashin": 8.875325474280267,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.1828130046859087,
+            "netting_over_measured": 0.2640194283114408
+          },
+          "diagnostic_gain_over_bare_liner_bar": {
+            "using_mean_liner_657": 222,
+            "range_using_622_and_692": [
+              187,
+              257
+            ]
+          },
+          "diagnostic_netting_over_gain_mean_liner": 1.045374222908813
+        },
+        {
+          "label": "GF_P2 sensitivity: radius = composite inner radius",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 16.95096020822722,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 16.942450669469608,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 150.36976402348031,
+            "last_ply_over_first_ply_hashin": 8.875325474280263,
+            "netting_bar": 217.16474274363077,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.019284368837573628,
+            "first_ply_hashin_over_measured": 0.01927468790610877,
+            "last_ply_over_measured": 0.17106912858188886,
+            "netting_over_measured": 0.24705886546488143
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: stack order [90,+11,-11,90]x3 (hoop plies on both sides of each helical pair)",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 21.401586381899648,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 2,
+            "first_ply_hashin_bar": 21.39602817187607,
+            "first_hashin_event": "ply 2 bottom face, Matrix tension",
+            "last_ply_bar": 233.12426408457193,
+            "last_ply_over_first_ply_hashin": 10.895679432269644,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 18,
+            "cascade_steps": 8,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.024347652311603695,
+            "first_ply_hashin_over_measured": 0.024341328978243537,
+            "last_ply_over_measured": 0.26521531750235716,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: stack order [+11,-11]x3 then 90x6 (blocks)",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 12.51659977691303,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 12.503186438430781,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 61.162721322023,
+            "last_ply_over_first_ply_hashin": 4.891770719664584,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 17,
+            "cascade_steps": 19,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.01423959018988968,
+            "first_ply_hashin_over_measured": 0.014224330419147646,
+            "last_ply_over_measured": 0.06958216305122071,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: ply thickness 0.2 mm (FE value) instead of measured",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.205670037239084,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.19653062254593,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 161.50013177780284,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 233.23927385503163,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020711797539521144,
+            "first_ply_hashin_over_measured": 0.02070140002564952,
+            "last_ply_over_measured": 0.18373166300091334,
+            "netting_over_measured": 0.2653461591069757
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: Hashin St = S12 (assumed) instead of Yc/(2 tan 53)",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 160.69263111891374,
+            "last_ply_over_first_ply_hashin": 8.875325474280267,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": false,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.1828130046859087,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: Hashin St = 0.5 S12 (assumed) instead of Yc/(2 tan 53)",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 160.69263111891374,
+            "last_ply_over_first_ply_hashin": 8.875325474280267,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": false,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.1828130046859087,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: residual factors E1 0.001 / E2,G12 0.01",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 160.86548043048336,
+            "last_ply_over_first_ply_hashin": 8.884872233752084,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 18,
+            "cascade_steps": 19,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.18300964781624957,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: residual factors E1 0.1 / E2,G12 0.3",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 109.7476307213591,
+            "last_ply_over_first_ply_hashin": 6.0615470410860395,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 12,
+            "cascade_steps": 11,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.12485509752145518,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: residual factors 0.5 / 0.5 / 0.5",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 45.904911974603216,
+            "last_ply_over_first_ply_hashin": 2.5354058353882736,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 12,
+            "cascade_steps": 10,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.05222401817361003,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "GF_P2 sensitivity: fibre failure also removes E2, G12 (x0.1)",
+          "kind": "sensitivity",
+          "specimen": "GF_P2",
+          "predicted": {
+            "first_ply_clt_bar": 18.114641687052877,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 18.10554796943319,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 160.69263111891374,
+            "last_ply_over_first_ply_hashin": 8.875325474280267,
+            "netting_bar": 232.07307748575647,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.020608238551823525,
+            "first_ply_hashin_over_measured": 0.02059789302552126,
+            "last_ply_over_measured": 0.1828130046859087,
+            "netting_over_measured": 0.2640194283114408
+          }
+        },
+        {
+          "label": "HY_P1 sensitivity: bound: all hoop plies glass",
+          "kind": "sensitivity",
+          "specimen": "HY_P1",
+          "measured_burst_bar": 922,
+          "measured_burst_mpa": 92.2,
+          "bare_liner_burst_bar": 622,
+          "paper_fe_bar": 943,
+          "ply_thickness_mm": 0.25,
+          "radius_pressure_mm": 65.625,
+          "radius_composite_inner_mm": 70.125,
+          "predicted": {
+            "first_ply_clt_bar": 22.731079446495656,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 22.71966823443592,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 201.64445024828527,
+            "last_ply_over_first_ply_hashin": 8.875325474280265,
+            "netting_bar": 291.2158933561394,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.024654099182750168,
+            "first_ply_hashin_over_measured": 0.024641722597002085,
+            "last_ply_over_measured": 0.21870330829532025,
+            "netting_over_measured": 0.3158523789112141
+          },
+          "note": "hybrid stack order UNSOURCED (Figure 4b only): a bound, not a prediction"
+        },
+        {
+          "label": "HY_P1 sensitivity: bound: all hoop plies carbon (upper)",
+          "kind": "sensitivity",
+          "specimen": "HY_P1",
+          "measured_burst_bar": 922,
+          "measured_burst_mpa": 92.2,
+          "bare_liner_burst_bar": 622,
+          "paper_fe_bar": 943,
+          "ply_thickness_mm": 0.25,
+          "radius_pressure_mm": 65.625,
+          "radius_composite_inner_mm": 70.125,
+          "predicted": {
+            "first_ply_clt_bar": 46.71559635719623,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 46.71541603438463,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 341.8869087012428,
+            "last_ply_over_first_ply_hashin": 7.3185029209543755,
+            "netting_bar": 484.583246544616,
+            "n_failure_events": 17,
+            "cascade_steps": 14,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.05066767500780502,
+            "first_ply_hashin_over_measured": 0.050667479429918255,
+            "last_ply_over_measured": 0.3708100962052525,
+            "netting_over_measured": 0.5255783585082603
+          },
+          "note": "hybrid stack order UNSOURCED (Figure 4b only): a bound, not a prediction"
+        },
+        {
+          "label": "HY_P2 sensitivity: bound: all hoop plies glass",
+          "kind": "sensitivity",
+          "specimen": "HY_P2",
+          "measured_burst_bar": 887,
+          "measured_burst_mpa": 88.7,
+          "bare_liner_burst_bar": 692,
+          "paper_fe_bar": 943,
+          "ply_thickness_mm": 0.21700000000000003,
+          "radius_pressure_mm": 65.55,
+          "radius_composite_inner_mm": 70.05,
+          "predicted": {
+            "first_ply_clt_bar": 19.753151990404405,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 19.74323572546233,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 175.22764297891598,
+            "last_ply_over_first_ply_hashin": 8.875325474280263,
+            "netting_bar": 253.0646121327093,
+            "n_failure_events": 17,
+            "cascade_steps": 13,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.022269618929429993,
+            "first_ply_hashin_over_measured": 0.022258439374816606,
+            "last_ply_over_measured": 0.19755089400103268,
+            "netting_over_measured": 0.2853039595633701
+          },
+          "note": "hybrid stack order UNSOURCED (Figure 4b only): a bound, not a prediction"
+        },
+        {
+          "label": "HY_P2 sensitivity: bound: all hoop plies carbon (upper)",
+          "kind": "sensitivity",
+          "specimen": "HY_P2",
+          "measured_burst_bar": 887,
+          "measured_burst_mpa": 88.7,
+          "bare_liner_burst_bar": 692,
+          "paper_fe_bar": 943,
+          "ply_thickness_mm": 0.21700000000000003,
+          "radius_pressure_mm": 65.55,
+          "radius_composite_inner_mm": 70.05,
+          "predicted": {
+            "first_ply_clt_bar": 40.59553253236905,
+            "first_ply_clt_criterion": "Maximum Stress",
+            "first_ply_clt_ply": 1,
+            "first_ply_hashin_bar": 40.59537583308368,
+            "first_hashin_event": "ply 1 bottom face, Matrix tension",
+            "last_ply_bar": 297.09737661166355,
+            "last_ply_over_first_ply_hashin": 7.318502920954375,
+            "netting_bar": 421.0995145888283,
+            "n_failure_events": 17,
+            "cascade_steps": 14,
+            "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops",
+            "transverse_shear_assumed": true,
+            "first_ply_clt_over_measured": 0.04576722946152091,
+            "first_ply_hashin_over_measured": 0.0457670527994179,
+            "last_ply_over_measured": 0.334946309596013,
+            "netting_over_measured": 0.4747457887134479
+          },
+          "note": "hybrid stack order UNSOURCED (Figure 4b only): a bound, not a prediction"
+        }
+      ],
+      "not_run": [
+        {
+          "item": "total burst of the Type III vessel",
+          "reason": "34CrMo4 liner properties UNSOURCED; no liner/composite load-sharing model"
+        },
+        {
+          "item": "hybrid prediction",
+          "reason": "12-ply hybrid stack order UNSOURCED; only bounds given"
+        },
+        {
+          "item": "dome",
+          "reason": "dome profile and polar opening UNSOURCED; failures were cylindrical"
+        }
+      ]
+    },
+    {
+      "id": "ALAM_2020",
+      "data_status": "CONDITIONAL",
+      "model_scope": "cylinder wall (Type IV: polymer liner assumed to carry no load)",
+      "measured_burst_psi": [
+        2282,
+        2327,
+        2391
+      ],
+      "measured_mean_burst_psi": 2333.3333333333335,
+      "paper_fe_psi_range": [
+        2237.5,
+        2300
+      ],
+      "result_form": "p*R [N/m] and the radius at which each prediction would equal the measured mean burst. No pressure is predicted: the inner radius is UNSOURCED (Figures 1-3). p_pred = (p*R)/R once R is read from the figure; no radius is assumed here.",
+      "runs": [
+        {
+          "label": "ALAM primary: stack as listed (ply 1 first)",
+          "kind": "primary",
+          "stack_ply1_to_ply5_deg": [
+            -13,
+            13,
+            88,
+            -13,
+            13
+          ],
+          "pR_N_per_m": {
+            "first_ply_clt": 724934.7469105903,
+            "first_ply_hashin": 718738.4003192382,
+            "last_ply": 833166.2498296024,
+            "netting": 789202.6117488008
+          },
+          "implied_radius_mm_for_measured_mean_burst": {
+            "first_ply_clt": 45.06124101168827,
+            "first_ply_hashin": 44.67608211520168,
+            "last_ply": 51.788806297908934,
+            "netting": 49.0560691794963
+          },
+          "hashin_first_event": "ply 5 top face, Matrix tension",
+          "stop_reason": "a family that is already degraded twice would exceed its strength again (two-level residual-stiffness termination rule): the algorithm stops"
+        }
+      ],
+      "not_run": [
+        {
+          "item": "predicted burst pressure vs measured",
+          "reason": "inner radius, wall/liner thickness, dome UNSOURCED"
+        }
+      ]
+    },
+    {
+      "id": "KARTAV_2021",
+      "data_status": "CONDITIONAL",
+      "model_scope": "netting diagnostic only (fibre strength = ply Xt), cylinder wall, order-independent",
+      "runs": [
+        {
+          "config": "ALCF1",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1018,
+          "failure_location": "front dome - unsafe",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF2",
+          "helical_layers": 9,
+          "hoop_layers": 16,
+          "measured_burst_bar": 1050,
+          "failure_location": "front dome",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 448.98823371512776,
+            "R = 76.5 mm (153 mm read as a diameter)": 897.9764674302555
+          }
+        },
+        {
+          "config": "ALCF3",
+          "helical_layers": 12,
+          "hoop_layers": 22,
+          "measured_burst_bar": 1050,
+          "failure_location": "front dome",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 617.3588213583007,
+            "R = 76.5 mm (153 mm read as a diameter)": 1234.7176427166014
+          }
+        },
+        {
+          "config": "ALCF4",
+          "helical_layers": 13,
+          "hoop_layers": 22,
+          "measured_burst_bar": 1050,
+          "failure_location": "front dome",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 617.3588213583007,
+            "R = 76.5 mm (153 mm read as a diameter)": 1234.7176427166014
+          }
+        },
+        {
+          "config": "ALCF5",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1146,
+          "failure_location": "front dome",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF6",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1170,
+          "failure_location": "front dome",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF7",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1264,
+          "failure_location": "front dome",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF8",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1281,
+          "failure_location": "aft dome transition",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF9",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1330,
+          "failure_location": "aft dome to cylindrical mid-region",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF10",
+          "helical_layers": 9,
+          "hoop_layers": 14,
+          "measured_burst_bar": 1355,
+          "failure_location": "cylindrical mid-region - safe",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 392.8647045007368,
+            "R = 76.5 mm (153 mm read as a diameter)": 785.7294090014736
+          }
+        },
+        {
+          "config": "ALCF11",
+          "helical_layers": 9,
+          "hoop_layers": 16,
+          "measured_burst_bar": 1397,
+          "failure_location": "cylindrical mid-region",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 448.98823371512776,
+            "R = 76.5 mm (153 mm read as a diameter)": 897.9764674302555
+          }
+        },
+        {
+          "config": "ALCF12",
+          "helical_layers": 9,
+          "hoop_layers": 16,
+          "measured_burst_bar": 1480,
+          "failure_location": "cylindrical mid-region",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 448.98823371512776,
+            "R = 76.5 mm (153 mm read as a diameter)": 897.9764674302555
+          }
+        },
+        {
+          "config": "ALCF13",
+          "helical_layers": 9,
+          "hoop_layers": 15,
+          "measured_burst_bar": 1387,
+          "failure_location": "cylindrical mid-region",
+          "netting_bar": {
+            "R = 153 mm (as published, 'average radius')": 420.9264691079323,
+            "R = 76.5 mm (153 mm read as a diameter)": 841.8529382158646
+          }
+        }
+      ],
+      "not_run": [
+        {
+          "item": "CLT first-ply, Hashin first-ply, last-ply",
+          "reason": "ply-by-ply stack order UNSOURCED (graphical only); doily G12 UNSOURCED"
+        },
+        {
+          "item": "comparison with measured burst",
+          "reason": "Al 6061-T6 liner properties UNSOURCED; radius ambiguous; ALCF1-9 failed in the DOMES (a cylinder-wall model does not apply)"
+        }
+      ],
+      "note": "Netting from the cylinder layup (9 helical +/-14 layers of 0.25 mm and N hoop layers of 0.2 mm). Doily layers belong to the domes and are excluded."
+    }
+  ]
+}

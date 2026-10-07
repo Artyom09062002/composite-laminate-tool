@@ -5,8 +5,8 @@ import unittest
 import numpy as np
 
 from core import StrengthAllowables, assemble_laminate_stiffness, recover_ply_surfaces
-from core.dome import (clairaut_angle_deg, cylinder_winding_angle_deg, dome_resultants, dome_stations, dome_wall,
-                       ellipsoid_dome_geometry, thickness_factor)
+from core.dome import (bending_zone_length_m, clairaut_angle_deg, cylinder_winding_angle_deg, dome_resultants, dome_stations,
+                       dome_wall, ellipsoid_dome_geometry, meridian_arc_length_m, thickness_factor)
 from core.failure import first_ply_limit
 from core.vessel import cylinder_resultants, first_ply_under_unit_load
 from materials import DEFAULT_MATERIALS
@@ -153,6 +153,60 @@ class CylinderConsistencyTests(unittest.TestCase):
         for k in (0.5, 1.0):
             p = stations(k).first_ply_pressure_pa
             self.assertTrue(np.all(np.isfinite(p)) and np.all(p > 0))
+
+
+class ValidityZoneTests(unittest.TestCase):
+    """Review C3 items 3, 7, 10: junction and turnaround stations are not strength predictions."""
+
+    def test_bending_zone_length_closed_form(self):
+        r, h, nu = 0.1, 2e-3, 0.3
+        beta = (3 * (1 - nu**2)) ** 0.25 / math.sqrt(r * h)
+        self.assertAlmostEqual(bending_zone_length_m(r, h, nu), math.pi / beta, places=15)
+        self.assertGreater(bending_zone_length_m(r, 4 * h), bending_zone_length_m(r, h))   # grows as sqrt(R h)
+        for bad in ((0.0, h, nu), (r, -h, nu), (r, h, 1.0)):
+            with self.assertRaises(ValueError):
+                bending_zone_length_m(*bad)
+
+    def test_arc_length_hemisphere_and_ellipsoid(self):
+        radii = np.array([R, 0.8 * R, 0.5 * R])
+        np.testing.assert_allclose(meridian_arc_length_m(radii, R, 1.0), R * np.arccos(radii / R), rtol=1e-7)
+        k, b = 0.5, 0.5 * R
+        t = np.linspace(0.0, math.acos(0.5), 400001)
+        speed = np.sqrt(R**2 * np.sin(t) ** 2 + b**2 * np.cos(t) ** 2)
+        reference = float(np.sum(0.5 * (speed[1:] + speed[:-1]) * np.diff(t)))             # independent dense quadrature
+        self.assertAlmostEqual(float(meridian_arc_length_m(0.5 * R, R, k)[0]) / reference, 1.0, places=7)
+        self.assertEqual(float(meridian_arc_length_m(R, R, k)[0]), 0.0)
+
+    def test_junction_and_opening_stations_are_flagged_and_the_middle_is_valid(self):
+        for k in (0.5, 1.0):
+            s = stations(k)
+            self.assertFalse(s.membrane_valid[0])
+            self.assertFalse(s.membrane_valid[-1])
+            valid = s.arc_m[s.membrane_valid]
+            total = float(meridian_arc_length_m(R0, R, k)[0])
+            self.assertTrue(np.all(valid >= s.bending_zone_m) and np.all(total - valid >= s.bending_zone_m))
+
+    def test_headline_weakest_station_is_never_a_flagged_one(self):
+        # Hemisphere and 2:1 head: the global minimum sits at the junction (membrane jump), which must not be quoted.
+        for k in (0.5, 1.0):
+            s = stations(k)
+            self.assertEqual(int(np.argmin(s.first_ply_pressure_pa)), 0)
+            index = s.weakest_valid_index()
+            self.assertTrue(s.membrane_valid[index])
+            self.assertGreater(s.first_ply_pressure_pa[index], s.first_ply_pressure_pa[0])
+        # k = 0.7: the global minimum lies in the turnaround zone near the opening.
+        s = stations(0.7)
+        self.assertFalse(s.membrane_valid[int(np.argmin(s.first_ply_pressure_pa))])
+        self.assertTrue(s.membrane_valid[s.weakest_valid_index()])
+
+    def test_no_valid_station_when_the_wall_is_too_thick_for_membrane_theory(self):
+        thick = dome_stations(angle_ply_wall(ALPHA0, 200, PLY_T), [GR], [SGR], R0, R)
+        self.assertFalse(thick.membrane_valid.any())
+        self.assertIsNone(thick.weakest_valid_index())
+
+    def test_membrane_values_themselves_are_unchanged(self):
+        s = stations(1.0)
+        np.testing.assert_allclose(s.n_phi, 0.5 * R, rtol=1e-12)   # flagging does not alter the equations
 
 
 if __name__ == "__main__":

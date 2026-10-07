@@ -11,10 +11,11 @@ import streamlit as st
 
 from core import (
     StrengthAllowables, assemble_laminate_stiffness, compute_Q_matrix, engineering_constants,
-    evaluate_failure, recover_ply_surfaces, transform_Q, tsai_wu_load_factor,
+    evaluate_failure, hashin, recover_ply_surfaces, transform_Q, tsai_wu_load_factor,
 )
 from core.dome import cylinder_winding_angle_deg, dome_stations
-from core.vessel import NETTING_ANGLE_DEG
+from core.progressive import DegradationRules, progressive_failure
+from core.vessel import NETTING_ANGLE_DEG, cylinder_resultants
 from examples.spar_cap import MATERIAL_SOURCE, analyze_spar_cap
 from materials import DEFAULT_MATERIALS
 from workflow import (first_ply_limit, angle_ply_wall, assess_design, editor_to_layup, is_balanced, is_symmetric,
@@ -526,6 +527,15 @@ with tabs[5]:
         st.write("Maximum Stress compares each stress component with its own tension/compression or shear strength. Tsai–Wu combines all components in one quadratic polynomial.")
         st.latex(r"FI=F_1\sigma_1+F_2\sigma_2+F_{11}\sigma_1^2+F_{22}\sigma_2^2+2F_{12}\sigma_1\sigma_2+F_{66}\tau_{12}^2")
         st.caption("F₁₂ = −0.5√(F₁₁F₂₂) (Tsai–Hahn) is an assumption, not measured interaction data.")
+        st.write("**Hashin** (plane-stress, Hashin-1980-inspired initiation criterion) separates four modes and names the active one: fibre tension FT = (σ₁/Xt)² + (τ₁₂/S)²; fibre compression "
+                 "FC = (σ₁/Xc)²; matrix tension MT = (σ₂/Yt)² + (τ₁₂/S)²; matrix compression "
+                 "MC = (σ₂/2Sₜ)² + [(Yc/2Sₜ)² − 1]σ₂/Yc + (τ₁₂/S)².")
+        st.caption("Parameters: Xt, Xc, Yt, Yc, S₁₂, Sₜ (= S₂₃) and α. Shear contribution: α = 1 in fibre tension (the Hashin 1980 form; a chosen setting "
+                   "that should be validated with combined σ₁–τ₁₂ tests; α = 0 is the Hashin–Rotem-type alternative), the full (τ₁₂/S)² in both matrix modes, none in "
+                   "fibre compression. Plane stress drops σ₃, τ₁₃, τ₂₃, so interlaminar failure is not assessed. Sₜ is not in the five allowables: "
+                   "Sₜ = Yc/(2·tan 53°) is assumed (a Mohr–Coulomb value for a typical 53° fracture angle, not measured S₂₃). "
+                   "Hashin R is the strength ratio from solving index(R·σ) = 1. Hashin is reported next to Max Stress and Tsai–Wu; "
+                   "the first-ply screen and load factor below still use Max Stress and Tsai–Wu only.")
         st.info("FI is a quadratic index, so FI = 0.5 does **not** mean 50% of the failure load. Use the strength ratio R "
                 "(the load scale at which FI = 1; if the linear terms vanish, R = 1/√FI) to compare with the linear Max Stress index, where 1/index is the load scale.")
         rows = []
@@ -539,8 +549,12 @@ with tabs[5]:
                          "Controlling mode": check.maximum_stress_mode,
                          "Tsai–Wu FI": check.tsai_wu_index,
                          "Tsai–Wu R": tsai_wu_load_factor(point.local_stress, allow),
+                         "Hashin active mode": check.hashin_mode,
+                         "Hashin index": check.hashin_index,
+                         "Hashin R": hashin(point.local_stress, allow).load_factor,
                          "Screen": "Exceeds limit" if max(check.maximum_stress_utilization, check.tsai_wu_index) >= 1 else "Below limit"})
-        ratio_cols = ["Fibre σ₁/X", "Transverse σ₂/Y", "Shear |τ₁₂|/S", "Max Stress index", "Tsai–Wu FI", "Tsai–Wu R"]
+        ratio_cols = ["Fibre σ₁/X", "Transverse σ₂/Y", "Shear |τ₁₂|/S", "Max Stress index", "Tsai–Wu FI", "Tsai–Wu R",
+                      "Hashin index", "Hashin R"]
         st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch", height=table_height(len(rows)),
                      column_config={c: st.column_config.NumberColumn(c, format="%.3f") for c in ratio_cols})
         critical_i, factor, criterion = first_ply_limit(response.ply_surfaces, surface_strengths)
@@ -632,9 +646,11 @@ with tabs[7]:
     else:
         sweep = []
         for theta in range(0, 91):
-            result = screen_cylinder(angle_ply_wall(theta, wall_plies, ply_thickness_m), [material], [strengths], radius_m)
-            sweep.append({"angle": theta, "first_ply": result.first_ply_pressure_pa / 1e6, "netting": result.netting_bound_pa / 1e6,
-                          "mode": result.first_ply_mode})
+            theta_wall = angle_ply_wall(theta, wall_plies, ply_thickness_m)
+            result = screen_cylinder(theta_wall, [material], [strengths], radius_m)
+            last_ply = progressive_failure(theta_wall, [material], [strengths], cylinder_resultants(1.0, radius_m)).last_ply_load_factor
+            sweep.append({"angle": theta, "first_ply": result.first_ply_pressure_pa / 1e6, "last_ply": last_ply / 1e6,
+                          "netting": result.netting_bound_pa / 1e6, "mode": result.first_ply_mode})
         sweep_frame = pd.DataFrame(sweep)
         best = sweep_frame.loc[sweep_frame["first_ply"].idxmax()]
         netting_best = screen_cylinder(angle_ply_wall(NETTING_ANGLE_DEG, wall_plies, ply_thickness_m), [material], [strengths], radius_m)
@@ -646,12 +662,14 @@ with tabs[7]:
         best_label = f"{best['angle']:.0f}°" if best["angle"] in (0, 90) else f"±{best['angle']:.0f}°"
         study_cols[3].metric("Best first-ply pressure [MPa]", f"{best['first_ply']:.1f} at {best_label}")
         long = sweep_frame.drop(columns="mode").melt("angle", var_name="key", value_name="pressure")
-        long["limit"] = long["key"].map({"first_ply": "First-ply failure (CLT)", "netting": "Fibre limit (netting)"})
+        long["limit"] = long["key"].map({"first_ply": "First-ply failure (CLT)", "last_ply": "Last-ply failure (Hashin, progressive)",
+                                         "netting": "Fibre limit (netting)"})
         layers = [alt.Chart(long).mark_line(strokeWidth=3).encode(
                       x=alt.X("angle:Q", title="Winding angle ±θ [deg]", scale=alt.Scale(domain=[0, 90])),
                       y=alt.Y("pressure:Q", title="Pressure [MPa]", scale=alt.Scale(domainMin=0)),
-                      color=alt.Color("limit:N", scale=alt.Scale(domain=["First-ply failure (CLT)", "Fibre limit (netting)"],
-                                                                 range=["#e07b22", "#087f8c"]),
+                      color=alt.Color("limit:N", scale=alt.Scale(domain=["First-ply failure (CLT)", "Last-ply failure (Hashin, progressive)",
+                                                                         "Fibre limit (netting)"],
+                                                                 range=["#e07b22", "#7b3fa0", "#087f8c"]),
                                       legend=alt.Legend(orient="top", title=None)),
                       tooltip=[alt.Tooltip("angle:Q", title="Angle [deg]"), alt.Tooltip("limit:N", title="Limit"),
                                alt.Tooltip("pressure:Q", title="Pressure [MPa]", format=".2f")]),
@@ -662,7 +680,8 @@ with tabs[7]:
         st.caption(f"±θ wall of {wall_plies} plies, sidebar material, R = {radius_mm:g} mm. Dashed line: netting angle 54.74°"
                    + ("; red line: working pressure." if working_mpa > 0 else ".")
                    + " Away from 54.74° fibres alone cannot balance Nx and Ny; the teal curve is the pressure at which the more demanding "
-                   "direction would bring the fibres to Xt (an upper bound).")
+                   "direction would bring the fibres to Xt (an upper bound). Purple: last-ply pressure of the progressive-failure model "
+                   "with its default degradation factors (assumptions, see the layup check below).")
         ratio = netting_best.first_ply_pressure_pa / max(netting_best.netting_pressure_pa, 1e-12)
         peak_text = (f"is also highest near this angle here ({best_label}, failure mode: {best['mode'].lower()}). "
                      if abs(best["angle"] - NETTING_ANGLE_DEG) <= 3 else
@@ -694,11 +713,93 @@ with tabs[7]:
                        "Add hoop (90°) or low-angle helical plies.")
         st.caption(f"Current layup ({len(st.session_state.plies)} plies, h = {current_wall:.2f} mm), each ply with its own material. "
                    "Hoop (90°) plies carry Ny and low-angle helical plies carry Nx; try [90,15,-15,90]s against [55,-55,55,-55]s.")
+        st.markdown("**First-ply vs last-ply failure of the current layup (progressive failure)**")
+        st.write("The wall is loaded with Nx = pR/2 and Ny = pR. At each failure the failed ply is degraded, ABD is rebuilt and the pressure rises "
+                 "until the discount algorithm stops: the first failure is first-ply failure by Hashin; the last pressure is where this model stops (two degradations of a family, see the rules), not a measured burst pressure.")
+        with st.expander("Degradation rules: model assumptions, not material data"):
+            rule_cols = st.columns(3)
+            fibre_factor = rule_cols[0].number_input("E₁ kept after fibre failure", min_value=0.001, max_value=1.0, value=0.01,
+                                                     step=0.01, format="%.3f", key="deg_fibre")
+            matrix_e2_factor = rule_cols[1].number_input("E₂ kept after matrix failure", min_value=0.001, max_value=1.0, value=0.1,
+                                                         step=0.05, format="%.3f", key="deg_e2")
+            matrix_g_factor = rule_cols[2].number_input("G₁₂ kept after matrix failure", min_value=0.001, max_value=1.0, value=0.1,
+                                                        step=0.05, format="%.3f", key="deg_g12")
+            degradation = DegradationRules(fibre_factor, matrix_e2_factor, matrix_g_factor)
+            st.caption(degradation.statement(transverse_shear_assumed=any(s.St is None for s in strengths_list)) + " The last-ply pressure changes with these factors.")
+        try:
+            progressive = progressive_failure(st.session_state.plies, materials_list, strengths_list,
+                                              cylinder_resultants(1.0, radius_m), degradation)
+        except ValueError as error:
+            st.warning(str(error))
+        else:
+            first_event = progressive.events[0]
+            prog_cols = st.columns(4)
+            prog_cols[0].metric("First-ply, Hashin [MPa]", f"{progressive.first_ply_load_factor / 1e6:.2f}",
+                                help=f"Ply {first_event.ply}, {first_event.surface.lower()} face; mode: {first_event.mode.lower()}. "
+                                     "The CLT first-ply value above uses Maximum Stress and Tsai–Wu.")
+            prog_cols[1].metric("Last-ply (model stop) [MPa]", f"{progressive.last_ply_load_factor / 1e6:.2f}",
+                                help="Pressure at which the discount algorithm stops (two-level residual-stiffness termination rule). Every residual stiffness stays positive: this is not a physical ultimate load.")
+            prog_cols[2].metric("Last-ply / first-ply", f"{progressive.last_ply_load_factor / progressive.first_ply_load_factor:.2f}",
+                                help="Reserve between the first damage and the end of the load-carrying capacity.")
+            prog_cols[3].metric("Last-ply / netting estimate",
+                                "n/a" if current.netting_pressure_pa <= 0 else f"{progressive.last_ply_load_factor / current.netting_pressure_pa:.2f}",
+                                help="Netting (fibres only, shown above) is the reference; near 1 means the fibres govern the burst.")
+            rows = []
+            for step in progressive.history[1:]:
+                pressure = f"{step.load_factor / 1e6:.2f}"
+                if step.kind == "failure":
+                    step_events = [e for e in progressive.events if e.step == step.step]
+                    rows.append({"Step": step.step, "Pressure [MPa]": float(pressure), "What happens": "Hashin failure",
+                                 "Mode": ", ".join(sorted({e.mode for e in step_events})),
+                                 "Plies": ", ".join(str(e.ply) for e in step_events), "Stiffness left": step.stiffness_ratio})
+                else:
+                    rows.append({"Step": step.step, "Pressure [MPa]": float(pressure),
+                                 "What happens": "Residual strength exceeded: degraded again",
+                                 "Mode": ", ".join(sorted({family for _, family in step.escalations})),
+                                 "Plies": ", ".join(str(ply) for ply, _ in step.escalations), "Stiffness left": step.stiffness_ratio})
+            st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch", height=table_height(len(rows)),
+                         column_config={"Pressure [MPa]": st.column_config.NumberColumn(format="%.2f"),
+                                        "Stiffness left": st.column_config.NumberColumn(format="%.3f",
+                                            help="Secant stiffness along the pressure load, relative to the undamaged wall.")})
+            pressure_mpa, hoop_strain = progressive.load_strain_curve(1)
+            curve = pd.DataFrame({"strain": hoop_strain * 100.0, "pressure": pressure_mpa / 1e6})
+            marks = [("First-ply (CLT)", current.first_ply_pressure_pa / 1e6, "#e07b22"),
+                     ("Last-ply (progressive)", progressive.last_ply_load_factor / 1e6, "#7b3fa0")]
+            if current.netting_pressure_pa > 0:
+                marks.append(("Netting estimate", current.netting_pressure_pa / 1e6, "#087f8c"))
+            if working_mpa > 0:
+                marks.append(("Working pressure", working_mpa, "#c0392b"))
+            mark_frame = pd.DataFrame(marks, columns=["limit", "pressure", "color"])
+            progressive_chart = alt.layer(
+                alt.Chart(curve).mark_line(color="#3b6fb6", strokeWidth=3).encode(
+                    x=alt.X("strain:Q", title="Hoop strain εy [%]", scale=alt.Scale(domainMin=0)),
+                    y=alt.Y("pressure:Q", title="Pressure [MPa]", scale=alt.Scale(domainMin=0)),
+                    tooltip=[alt.Tooltip("strain:Q", title="εy [%]", format=".3f"), alt.Tooltip("pressure:Q", title="p [MPa]", format=".2f")]),
+                alt.Chart(mark_frame).mark_rule(strokeDash=[5, 4]).encode(
+                    y="pressure:Q", color=alt.Color("limit:N", scale=alt.Scale(domain=list(mark_frame["limit"]), range=list(mark_frame["color"])),
+                                                    legend=alt.Legend(orient="top", title=None)),
+                    tooltip=[alt.Tooltip("limit:N", title="Limit"), alt.Tooltip("pressure:Q", title="p [MPa]", format=".2f")]),
+            ).properties(height=300)
+            st.altair_chart(progressive_chart, width="stretch")
+            ratio_note = progressive.last_ply_load_factor / progressive.first_ply_load_factor
+            st.markdown(
+                f"**How to read it.** The first damage is {first_event.mode.lower()} in ply {first_event.ply} at "
+                f"{progressive.first_ply_load_factor / 1e6:.2f} MPa; the wall keeps carrying pressure with less and less stiffness "
+                f"(the jumps in the curve), until {progressive.last_ply_load_factor / 1e6:.2f} MPa, {ratio_note:.2f}× the first-ply value. "
+                f"Why it ends: {progressive.collapse_reason}. "
+                "Matrix cracking (first ply) matters for stiffness, fatigue and gas tightness; burst is governed by the fibres, so the netting "
+                "estimate stays the reference for the fibre limit.")
+            st.caption("Progressive failure is applied to the cylindrical wall only (dome stations stay at first-ply, membrane theory). "
+                       "The last-ply value depends on the assumed degradation factors and the Hashin criterion with an assumed transverse "
+                       "shear strength; it is a screening estimate, not a validated burst prediction. The load factor is never reduced after a failure: "
+                       "this is not a stability analysis (snap-through is not detected). Not modelled: open holes, fatigue, impact, moisture and "
+                       "temperature, manufacturing defects, fibre kinking, crack growth, leakage and interlaminar strength. Use one computational ply per physical ply; "
+                       "there is no fracture-energy regularisation.")
     st.divider()
     st.markdown("**Dome: geodesic winding into the polar opening**")
     st.write("On a dome the fibres follow geodesics, so the polar opening r₀ fixes the winding angle: α₀ = asin(r₀/R) on the cylinder, "
              "rising to 90° at the opening (angles from the meridian, as above). The dome wall is the ±α₀ wall (same plies and sidebar "
-             "material) carried over the dome. It thickens toward the pole, and the membrane resultants follow the dome curvature "
+             "material) carried over the dome. It thickens toward the polar opening, and the membrane resultants follow the dome curvature "
              "(r₁ meridional, r₂ circumferential radius).")
     st.latex(r"r\sin\alpha=r_0,\quad t(r)=t_{cyl}\frac{R\cos\alpha_0}{r\cos\alpha},\quad "
              r"N_\varphi=\frac{p\,r_2}{2},\quad N_\theta=p\,r_2\Bigl(1-\frac{r_2}{2r_1}\Bigr)")
@@ -723,15 +824,23 @@ with tabs[7]:
             dome_cyl_mpa = screen_cylinder(dome_layup, [material], [strengths], radius_m).first_ply_pressure_pa / 1e6
             dome_frame = pd.DataFrame({"r": dome_result.radius_m * 1e3, "angle": dome_result.alpha_deg,
                                        "thickness": dome_result.thickness_m * 1e3,
-                                       "first_ply": dome_result.first_ply_pressure_pa / 1e6})
-            weakest = int(np.argmin(dome_result.first_ply_pressure_pa))
+                                       "first_ply": dome_result.first_ply_pressure_pa / 1e6,
+                                       "valid": dome_result.membrane_valid})
+            weakest = dome_result.weakest_valid_index()
+            zone_mm = dome_result.bending_zone_m * 1e3
             dome_metrics = st.columns(3)
             dome_metrics[0].metric("Wall thickness, cylinder → last station [mm]",
                                    f"{dome_frame['thickness'].iloc[0]:.2f} → {dome_frame['thickness'].iloc[-1]:.1f}",
                                    help="The last station is at r = 1.02·r₀: the model thickness is infinite at r₀.")
-            dome_metrics[1].metric("Weakest dome station, first-ply [MPa]", f"{dome_frame['first_ply'].iloc[weakest]:.2f}",
-                                   help=f"At r = {dome_frame['r'].iloc[weakest]:.0f} mm, ply {dome_result.first_ply_ply[weakest]}; "
-                                        f"mode: {dome_result.first_ply_mode[weakest].lower()}.")
+            if weakest is None:
+                dome_metrics[1].metric("Weakest valid dome station, first-ply [MPa]", "n/a",
+                                       help=f"Every station lies within the bending zone (about {zone_mm:.0f} mm) of the junction or the "
+                                            "opening, so membrane theory gives no usable strength value for this wall.")
+            else:
+                dome_metrics[1].metric("Weakest valid dome station, first-ply [MPa]", f"{dome_frame['first_ply'].iloc[weakest]:.2f}",
+                                       help=f"At r = {dome_frame['r'].iloc[weakest]:.0f} mm, ply {dome_result.first_ply_ply[weakest]}; "
+                                            f"mode: {dome_result.first_ply_mode[weakest].lower()}. Stations within about {zone_mm:.0f} mm "
+                                            "(meridional arc) of the junction or the opening are excluded.")
             dome_metrics[2].metric("Cylinder first-ply [MPa]", f"{dome_cyl_mpa:.2f}",
                                    help="Same ±α₀ wall as a cylinder (Ny = pR), for comparison.")
             dome_x = alt.X("r:Q", title="Parallel radius r [mm]  (cylinder → polar opening)", scale=alt.Scale(reverse=True))
@@ -743,7 +852,9 @@ with tabs[7]:
                 x=dome_x, y=alt.Y("thickness:Q", title="Wall thickness [mm]", scale=alt.Scale(domainMin=0),
                                   axis=alt.Axis(titleColor="#e07b22", orient="right")),
                 tooltip=[alt.Tooltip("r:Q", title="r [mm]", format=".1f"), alt.Tooltip("thickness:Q", title="t [mm]", format=".2f")])
-            fp_layers = [alt.Chart(dome_frame).mark_line(color="#3b6fb6", strokeWidth=3).encode(
+            fp_layers = [alt.Chart(dome_frame).mark_line(color="#9db4d6", strokeWidth=2, strokeDash=[2, 3]).encode(
+                             x=dome_x, y=alt.Y("first_ply:Q", title="First-ply pressure [MPa]", scale=alt.Scale(domainMin=0))),
+                         alt.Chart(dome_frame[dome_frame["valid"]]).mark_line(color="#3b6fb6", strokeWidth=3, point=True).encode(
                              x=dome_x, y=alt.Y("first_ply:Q", title="First-ply pressure [MPa]", scale=alt.Scale(domainMin=0)),
                              tooltip=[alt.Tooltip("r:Q", title="r [mm]", format=".1f"),
                                       alt.Tooltip("first_ply:Q", title="p first-ply [MPa]", format=".2f")]),
@@ -755,19 +866,25 @@ with tabs[7]:
                                        width="stretch")
             chart_cols[1].altair_chart(alt.layer(*fp_layers).properties(height=300), width="stretch")
             st.caption("Left: winding angle (teal) and wall thickness (orange). Right: first-ply pressure of the wall at each station; "
-                       "dashed grey = the same ±α₀ wall as a cylinder" + ("; red = working pressure." if working_mpa > 0 else "."))
+                       "dashed grey = the same ±α₀ wall as a cylinder" + ("; red = working pressure" if working_mpa > 0 else "")
+                       + f". Faint dotted blue: stations within ≈{zone_mm:.0f} mm of the junction or opening, where the membrane/CLT value is not a strength prediction.")
             junction_ratio = dome_result.n_theta[0] / radius_m
+            weakest_text = ("No station is far enough from the edges for a membrane-theory strength value. " if weakest is None else
+                            f"The weakest valid station (r = {dome_frame['r'].iloc[weakest]:.0f} mm, "
+                            f"{dome_result.first_ply_mode[weakest].lower()}) is where the helical plies carry the dome loads worst. ")
             dome_text = (f"Clairaut's relation turns the fibres from α₀ = {dome_alpha0:.1f}° toward the hoop direction at the opening, and the "
-                         "constant band width makes the wall thicken as 1/(r cos α). The weakest station "
-                         f"(r = {dome_frame['r'].iloc[weakest]:.0f} mm, {dome_result.first_ply_mode[weakest].lower()}) is where the helical plies "
-                         "carry the dome loads worst. At the junction the dome hoop resultant is "
-                         f"{junction_ratio:.2f}·pR against pR in the cylinder, so the membrane hoop load jumps there; "
-                         "a real vessel smooths this with bending and local geometry, which this model does not include. ")
+                         "constant band width makes the wall thicken as 1/(r cos α). " + weakest_text +
+                         "At the junction the dome hoop resultant is "
+                         f"{junction_ratio:.2f}·pR against pR in the cylinder, so the membrane hoop load jumps there and a bending boundary layer "
+                         "forms; the thickness law is singular at the opening. Neither edge is a strength prediction: use a shell-bending or "
+                         "finite-element transition analysis for them. ")
             if float(dome_result.n_theta.min()) < 0:
                 dome_text += "For this depth N_θ is negative near the equator (depth below about 0.71·R): the hoop direction is in compression. "
             st.markdown("**How to read it.** " + dome_text)
             st.caption("Dome model limits: helical plies only (no hoop plies, boss or liner), no fibre slippage, constant band width and fibre "
-                       "volume fraction, membrane theory (no bending). The isotensoid profile is not included.")
+                       "volume fraction, membrane theory (no bending). N_φ = p r₂/2 assumes a pressure-tight boss that passes the axial reaction "
+                       "p·π·r₀² into the shell at the opening. The edge zone is an isotropic-shell estimate (ν = 0.3, cylinder wall thickness). "
+                       "The isotensoid profile is not included.")
     st.info("**Model limits.** The cylinder checks cover the cylindrical section only; the dome part above models the helical plies alone "
             "(no bosses, end-fittings or slippage), thin-wall membrane resultants, no liner, "
             "no residual or thermal stresses. Netting ignores the matrix; for hybrid walls it is an upper estimate because fibres of "

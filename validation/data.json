@@ -1,0 +1,302 @@
+{
+  "_meta": {
+    "task": "C1",
+    "created": "2026-10-07",
+    "rule": "All numbers are as published in the PASTED ChatGPT text, which is UNVERIFIED input. No gap filled from memory. UNSOURCED = missing in pasted text.",
+    "strict_usable_cases": [],
+    "strict_criterion": "geometry AND layup AND lamina properties AND measured burst all given -> NO case passes: inner radius is NOT REPORTED in all four sources.",
+    "conditional_cases_included": "Included with UNSOURCED markers so the missing items are explicit; do not use for validation until the listed gaps are closed from original PDFs.",
+    "excluded": [
+      "LUDERS_2025 (no scalar burst pressure in the article; value only in Zenodo CSV pressure_raw_SN03.csv, DOI 10.5281/zenodo.10983652)",
+      "Part-1 lamina-only datasets (T300/5208, E-glass/epoxy, T700/epoxy): no vessel, no burst"
+    ],
+    "units": "as published per field; derived SI values labelled as derived"
+  },
+  "cases": [
+    {
+      "id": "KANGAL_2020",
+      "status": "CONDITIONAL",
+      "status_reason": "Layup, lamina properties and individual burst tests are complete. Geometry is incomplete: inner radius, polar opening, dome profile UNSOURCED; steel liner material properties not in pasted text.",
+      "citation": "S. Kangal, O. Kartav, M. Tanoglu, E. Aktas, H. Secil Artem, J. Compos. Mater. 54(7), 961-980 (2020)",
+      "doi": "10.1177/0021998319870588",
+      "provenance_caveat": "Pasted text cites Scribd/Studylib copies, not the publisher version. Not verified against the original.",
+      "vessel": "Type III, 34CrMo4 steel liner, two tests per design",
+      "geometry": {
+        "liner_wall_thickness": {"value": 4.5, "unit": "mm", "source": "text (average wall thickness)"},
+        "liner_average_diameter": {
+          "P1": {
+            "value": 140.25,
+            "unit": "mm",
+            "source": "Table 1",
+            "note": "column labelled 'Average diameter' only; not labelled inner or outer"
+          },
+          "P2": {"value": 140.1, "unit": "mm", "source": "Table 1", "note": "same"}
+        },
+        "liner_average_length": {
+          "P1": {"value": 474.5, "unit": "mm", "source": "Table 1"},
+          "P2": {"value": 474.46, "unit": "mm", "source": "Table 1"}
+        },
+        "copv_average_diameter": {
+          "GF_P1": {"value": 145.25, "unit": "mm", "source": "Table 1"},
+          "GF_P2": {"value": 145.03, "unit": "mm", "source": "Table 1"},
+          "HY_P1": {"value": 146.24, "unit": "mm", "source": "Table 1"},
+          "HY_P2": {"value": 145.46, "unit": "mm", "source": "Table 1"}
+        },
+        "copv_average_length": {
+          "GF_P1": {"value": 486.68, "unit": "mm", "source": "Table 1"},
+          "GF_P2": {"value": 482.93, "unit": "mm", "source": "Table 1"},
+          "HY_P1": {"value": 481.81, "unit": "mm", "source": "Table 1"},
+          "HY_P2": {"value": 484.79, "unit": "mm", "source": "Table 1"}
+        },
+        "inner_radius": {
+          "value": "UNSOURCED",
+          "reason": "Table 1 diameters are not labelled inner/outer; do not halve and call it inner radius"
+        },
+        "dome_type": {"value": "UNSOURCED", "reason": "not named in pasted text"},
+        "polar_opening_radius": {"value": "UNSOURCED", "reason": "not in pasted text"},
+        "dome_symmetry": "front (open end) and back (closed end) domes NOT identical (text)"
+      },
+      "layup": {
+        "nominal": {"value": "[±11/90_2]_3, 12 plies", "unit": "-", "source": "text"},
+        "ply_thickness_FE": {"value": 0.2, "unit": "mm", "source": "text (per helical or hoop ply, from prototype measurements)"},
+        "measured_avg_ply_thickness": {
+          "GF_P1": {"value": 0.208, "unit": "mm", "source": "Table 1"},
+          "GF_P2": {"value": 0.199, "unit": "mm", "source": "Table 1"},
+          "HY_P1": {"value": 0.25, "unit": "mm", "source": "Table 1"},
+          "HY_P2": {"value": 0.217, "unit": "mm", "source": "Table 1"}
+        },
+        "coverage": {"value": 105, "unit": "%", "source": "text"},
+        "hybrid_stack_order": {
+          "value": "UNSOURCED",
+          "reason": "full 12-ply hybrid order only in Figure 4(b); prose gives 2 CF hoop inner, 3 GF helical, 1 GF hoop outermost"
+        }
+      },
+      "fibre_resin": {
+        "glass": "1200 tex FWR6",
+        "carbon": "800 tex A-49 (hybrid only)",
+        "matrix": "Araldite MY740 / Aradur MY918 / DY062 (text)",
+        "fibre_volume_fraction": {"value": "UNSOURCED", "reason": "not in pasted text"}
+      },
+      "lamina": {
+        "glass_epoxy": {
+          "E1": {"value": 38500, "unit": "MPa", "source": "Table 2"},
+          "E2=E3": {"value": 16500, "unit": "MPa", "source": "Table 2"},
+          "G12=G13": {"value": 4700, "unit": "MPa", "source": "Table 2"},
+          "nu12=nu13": {"value": 0.27, "unit": "-", "source": "Table 2"},
+          "Xt": {"value": 1250, "unit": "MPa", "source": "Table 2"},
+          "Xc": {"value": -650, "unit": "MPa", "source": "Table 2"},
+          "Yt": {"value": 36, "unit": "MPa", "source": "Table 2"},
+          "Yc": {"value": -165, "unit": "MPa", "source": "Table 2"},
+          "S12": {"value": 86, "unit": "MPa", "source": "Table 2"}
+        },
+        "carbon_epoxy": {
+          "E1": {"value": 141000, "unit": "MPa", "source": "Table 2"},
+          "E2=E3": {"value": 11400, "unit": "MPa", "source": "Table 2"},
+          "G12=G13": {"value": 5000, "unit": "MPa", "source": "Table 2"},
+          "nu12=nu13": {"value": 0.28, "unit": "-", "source": "Table 2"},
+          "Xt": {"value": 2080, "unit": "MPa", "source": "Table 2"},
+          "Xc": {"value": -1250, "unit": "MPa", "source": "Table 2"},
+          "Yt": {"value": 60, "unit": "MPa", "source": "Table 2"},
+          "Yc": {"value": -290, "unit": "MPa", "source": "Table 2"},
+          "S12": {"value": 110, "unit": "MPa", "source": "Table 2"}
+        },
+        "sign_convention": "Xc, Yc published as negative in typeset table (per pasted text; one extraction corrupts the minus sign)"
+      },
+      "liner_material": {
+        "value": "UNSOURCED",
+        "reason": "34CrMo4 elastic/plastic properties not in pasted text; required for Type III load sharing"
+      },
+      "burst": {
+        "unit": "bar",
+        "source": "Table 4",
+        "tests": {
+          "bare_steel_liner": {"P1": 622, "P2": 692, "FE": 644},
+          "GF_COPV": {"P1": 919, "P2": 879, "FE": 953},
+          "GF_CF_hybrid_COPV": {"P1": 922, "P2": 887, "FE": 943}
+        },
+        "paper_reported_averages": {"bare_steel_liner": 657, "GF_COPV": 899, "GF_CF_hybrid_COPV": 905},
+        "use": "individual test values, not averages",
+        "failure_location": "predominantly cylindrical region (text); FE: initial tensile damage in critical hoop layers"
+      }
+    },
+    {
+      "id": "ALAM_2020",
+      "status": "CONDITIONAL",
+      "status_reason": "Layup, lamina properties and three burst tests complete. Geometry entirely UNSOURCED (dimensions only in Figures 1-3, not recoverable from text).",
+      "citation": "S. Alam, G. R. Yandek, R. C. Lee, J. M. Mabry, Composites Part C: Open Access 2, 100045 (2020)",
+      "doi": "10.1016/j.jcomc.2020.100045",
+      "provenance_caveat": "Pasted text cites ResearchGate; table/figure numbers for layup and burst values not stated in pasted text.",
+      "vessel": "Type IV, polymer liner, ASTM D2585 geometry, T800S-10E-24K / TCR UF3323 towpreg, cure 350 F 24 h",
+      "geometry": {
+        "standard": {"value": "ASTM D2585", "unit": "-", "source": "text"},
+        "inner_radius": {"value": "UNSOURCED", "reason": "Figures 1-3 dimension labels not recoverable"},
+        "wall_or_liner_thickness": {"value": "UNSOURCED", "reason": "same"},
+        "dome_type": {"value": "UNSOURCED", "reason": "not reported"},
+        "polar_opening_radius": {"value": "UNSOURCED", "reason": "same"},
+        "excluded_secondary": "241.3 mm x 146.05 mm from a later paper deliberately NOT imported (secondary source)"
+      },
+      "layup": {
+        "case": "Case 2, physically tested: [-13, +13, +88, -13, +13] deg",
+        "plies": [
+          {"ply": 1, "bandwidth_in": 0.23, "thickness_in": 0.033, "angle_deg": -13},
+          {"ply": 2, "bandwidth_in": 0.23, "thickness_in": 0.033, "angle_deg": 13},
+          {
+            "ply": 3,
+            "bandwidth_in": 0.23,
+            "thickness_in": 0.009,
+            "angle_deg": 88,
+            "note": "layup table says 88; case notation says +88"
+          },
+          {"ply": 4, "bandwidth_in": 0.23, "thickness_in": 0.033, "angle_deg": -13},
+          {"ply": 5, "bandwidth_in": 0.23, "thickness_in": 0.033, "angle_deg": 13}
+        ],
+        "source": "layup table in text (table number not given in pasted text)",
+        "note": "each polar winding layer = two plies, each hoop layer = one ply (text)"
+      },
+      "lamina": {
+        "source": "Table 1",
+        "unit_published": "ksi",
+        "Vf": {"value": 0.6, "unit": "-", "source": "Table 1"},
+        "E1": {"value": 25644, "unit": "ksi", "source": "Table 1"},
+        "E2": {"value": 1499, "unit": "ksi", "source": "Table 1"},
+        "nu12": {"value": 0.33, "unit": "-", "source": "Table 1"},
+        "G12": {"value": 710, "unit": "ksi", "source": "Table 1"},
+        "XT": {"value": 488, "unit": "ksi", "source": "Table 1"},
+        "XC": {"value": 250, "unit": "ksi", "source": "Table 1", "note": "positive magnitude as published"},
+        "YT": {"value": 14, "unit": "ksi", "source": "Table 1"},
+        "YC": {"value": 42, "unit": "ksi", "source": "Table 1", "note": "positive magnitude as published"},
+        "SL": {
+          "value": 14,
+          "unit": "ksi",
+          "source": "Table 1",
+          "note": "text also states S_L = S_T = 14 ksi (Hashin definition)"
+        },
+        "derived_SI_MPa": {
+          "note": "derived with 1 ksi = 6.894757 MPa, not published",
+          "E1": 176809,
+          "E2": 10335,
+          "G12": 4895,
+          "XT": 3365,
+          "XC": 1724,
+          "YT": 96.5,
+          "YC": 289.6,
+          "SL": 96.5
+        }
+      },
+      "burst": {
+        "unit": "psi",
+        "source": "text (table not stated)",
+        "tests": [2282, 2327, 2391],
+        "derived_MPa_note": "derived, not published",
+        "derived_MPa": [15.73, 16.04, 16.49],
+        "fe": {"range": [2237.5, 2300], "reported_average": 2268.75},
+        "failure_location": "hoop/cylindrical region (text)"
+      }
+    },
+    {
+      "id": "KARTAV_2021",
+      "status": "CONDITIONAL",
+      "status_reason": "Burst data and lamina card present, but: radius ambiguous and fails the netting check, ply order NOT REPORTED, Al liner properties UNSOURCED, OCR-damaged values. Lowest-confidence candidate.",
+      "citation": "O. Kartav, S. Kangal, K. Yücetürk, M. Tanoglu, E. Aktas, H. Secil Artem, J. Compos. Mater. 55(28), 4141-4155 (2021)",
+      "doi": "10.1177/00219983211033568",
+      "provenance_caveat": "Pasted text cites Scribd OCR copy; typeset Table 3 not seen.",
+      "vessel": "Type III, Al 6061-T6 liner, carbon/epoxy overwrap, 13 configurations",
+      "geometry": {
+        "reported_average_radius": {
+          "value": 153,
+          "unit": "mm",
+          "source": "text",
+          "note": "authors call it 'average radius'; NOT the inner radius; fails netting check, see README (may be a diameter)"
+        },
+        "liner_wall_thickness": {"value": 6, "unit": "mm", "source": "text"},
+        "composite_thickness_cylinder_average": {"value": 5.5, "unit": "mm", "source": "text"},
+        "inner_radius": {"value": "UNSOURCED", "reason": "not reported"},
+        "polar_opening_radius": {"value": "UNSOURCED", "reason": "not reported"},
+        "dome_type": {"value": "UNSOURCED", "reason": "not named; front/aft domes differently reinforced with doilies"}
+      },
+      "layup": {
+        "winding": {"value": "±14° helical + 90° hoop", "unit": "-", "source": "text"},
+        "rovings": {"value": "3 rovings x 4 mm bandwidth, CADWIND coverage 105%", "unit": "-", "source": "text"},
+        "helical_layer_thickness": {"value": 0.25, "unit": "mm", "source": "text"},
+        "hoop_layer_thickness": {"value": 0.2, "unit": "mm", "source": "text"},
+        "ply_by_ply_order": {"value": "UNSOURCED", "reason": "shown graphically only"},
+        "configurations_Table2": {
+          "ALCF1": {"helical": 9, "hoop": 14, "front_doily": 0, "aft_doily": 0},
+          "ALCF2": {"helical": 9, "hoop": 16, "front_doily": 0, "aft_doily": 0},
+          "ALCF3": {"helical": 12, "hoop": 22, "front_doily": 0, "aft_doily": 0},
+          "ALCF4": {"helical": 13, "hoop": 22, "front_doily": 0, "aft_doily": 0},
+          "ALCF5": {"helical": 9, "hoop": 14, "front_doily": 7, "aft_doily": 0},
+          "ALCF6": {"helical": 9, "hoop": 14, "front_doily": 11, "aft_doily": 0},
+          "ALCF7": {"helical": 9, "hoop": 14, "front_doily": 15, "aft_doily": 0},
+          "ALCF8": {"helical": 9, "hoop": 14, "front_doily": 17, "aft_doily": 0},
+          "ALCF9": {"helical": 9, "hoop": 14, "front_doily": 17, "aft_doily": 5},
+          "ALCF10": {"helical": 9, "hoop": 14, "front_doily": 17, "aft_doily": 9},
+          "ALCF11": {"helical": 9, "hoop": 16, "front_doily": 17, "aft_doily": 9},
+          "ALCF12": {"helical": 9, "hoop": 16, "front_doily": 17, "aft_doily": 9},
+          "ALCF13": {"helical": 9, "hoop": 15, "front_doily": 17, "aft_doily": 9}
+        },
+        "configurations_note": "'9 x ±14° helical' interpreted as 9 layers of 0.25 mm; interpretation supported by thickness check (README), not stated by source"
+      },
+      "fibre_resin": {
+        "fibre": "Toray T700SC-12K-50C",
+        "fibre_tensile_strength": {"value": 4.9, "unit": "GPa", "source": "text"},
+        "fibre_E": {"value": 230, "unit": "GPa", "source": "text"},
+        "matrix": "Araldite MY740 + Aradur MY918 + DY062",
+        "fibre_volume_fraction": {"value": "UNSOURCED", "reason": "not in pasted text"}
+      },
+      "lamina": {
+        "carbon_epoxy": {
+          "E1": {"value": 141, "unit": "GPa", "source": "Table 3"},
+          "E2=E3": {
+            "value": 11.4,
+            "unit": "GPa",
+            "source": "Table 3",
+            "note": "OCR shows 114; 11.4 supported by Kangal Table 2 (11,400 MPa), typeset Table 3 not seen"
+          },
+          "G12=G13": {"value": 5, "unit": "GPa", "source": "Table 3"},
+          "nu12=nu13": {"value": 0.28, "unit": "-", "source": "Table 3"},
+          "Xt": {"value": 2080, "unit": "MPa", "source": "Table 3"},
+          "Xc": {"value": -1250, "unit": "MPa", "source": "Table 3"},
+          "Yt": {"value": 60, "unit": "MPa", "source": "Table 3"},
+          "Yc": {"value": -290, "unit": "MPa", "source": "Table 3"},
+          "S12": {"value": 110, "unit": "MPa", "source": "Table 3"}
+        },
+        "carbon_woven_doily": {
+          "E1d": {"value": 60, "unit": "GPa", "source": "Table 3"},
+          "E2d=E3d": {"value": 60, "unit": "GPa", "source": "Table 3"},
+          "nu12d": {"value": 0.04, "unit": "-", "source": "Table 3"},
+          "Xtd": {"value": 513, "unit": "MPa", "source": "Table 3"},
+          "Xcd": {"value": -437, "unit": "MPa", "source": "Table 3"},
+          "Ytd": {"value": 513, "unit": "MPa", "source": "Table 3"},
+          "Ycd": {"value": -437, "unit": "MPa", "source": "Table 3"},
+          "G12d": {
+            "value": "UNSOURCED",
+            "reason": "transcription reads 175 GPa; exceeds E1d=60 GPa, implausible, typeset table not seen"
+          }
+        }
+      },
+      "liner_material": {"value": "UNSOURCED", "reason": "Al 6061-T6 properties not in pasted text"},
+      "burst": {
+        "unit": "bar",
+        "source": "Table 5",
+        "tests": {
+          "ALCF1": {"exp": 1018, "fe": 947, "failure": "front dome - unsafe"},
+          "ALCF2": {"exp": 1050, "failure": "front dome"},
+          "ALCF3": {"exp": 1050, "failure": "front dome"},
+          "ALCF4": {"exp": 1050, "failure": "front dome"},
+          "ALCF5": {"exp": 1146, "fe": 1305, "failure": "front dome"},
+          "ALCF6": {"exp": 1170, "fe": 1222, "failure": "front dome"},
+          "ALCF7": {"exp": 1264, "fe": 1265, "failure": "front dome"},
+          "ALCF8": {"exp": 1281, "fe": 1305, "failure": "aft dome transition"},
+          "ALCF9": {"exp": 1330, "fe": 1305, "failure": "aft dome to cylindrical mid-region"},
+          "ALCF10": {"exp": 1355, "fe": 1305, "failure": "cylindrical mid-region - safe"},
+          "ALCF11": {"exp": 1397, "fe": 1428, "failure": "cylindrical mid-region"},
+          "ALCF12": {"exp": 1480, "fe": 1428, "failure": "cylindrical mid-region"},
+          "ALCF13": {"exp": 1387, "fe": 1388, "failure": "cylindrical mid-region"}
+        },
+        "fe_source_note": "FE values from text paragraph after Table 5, not a table; ALCF2-4 FE not given",
+        "design_target": {"value": 1400, "unit": "bar", "source": "text (approx., 2 x 700 bar)"}
+      }
+    }
+  ]
+}

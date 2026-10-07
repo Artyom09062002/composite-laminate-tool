@@ -1,8 +1,8 @@
-
 # STATE (max 10 lines, updated at the end of every Claude session)
 
-- Done: v2 pushed (commit 38b7327): engineering constants, PDF export, pressure-vessel tab, 43 tests. SPEC.md and ACCEPTANCE.md written.
-- Done: C2 dome module core/dome.py, tests/test_dome.py (19), Dome subsection in the Pressure vessel tab; 62 tests pass. first_ply_limit moved to core/failure.py (re-exported by workflow); core.vessel.first_ply_under_unit_load shared by screen_cylinder and the dome.
-- C1 output is in validation/ (data.json, README.md), not committed here; per its README no case is fully usable (inner radius NOT REPORTED in all four sources), three are CONDITIONAL.
-- Next: G3 (independent review of core/dome.py), then C3 (progressive failure + Hashin).
-- Open issues: validation cases have UNSOURCED gaps (geometry); progressive failure, thermal, optimiser not started; isotensoid dome profile not implemented; dome model is helical plies only, membrane theory, no slippage.
+- Done (C4): Hashin / progressive-failure review verified (verification/REVIEW_C4.md): 3 defects fixed (pure-shear fibre damage, stop/new-failure batching, limitations), 6 wording or labelling fixes (assumed S_T, "last-ply" = model stop, termination rule, held steps), 3 partly confirmed; formulas unchanged.
+- Done (C4): validation harness validation/run_validation.py -> results.json, tables and chart in validation/README.md; Report No. 2 in reports/ (3 pages).
+- Result: no like-for-like comparison possible (inner radius NOT REPORTED in every source; Type III liner not modelled). Kangal glass: netting 0.26 of the measured total, 0.92 and 1.05 of the gain over the bare liner (plausibility only). Last-ply moves 64-243 bar with the unsourced stack order.
+- Tests: 120 passing (with streamlit and reportlab installed).
+- Next: read radius/dome from the paper figures and re-run; prefer a Type IV case (Luders CSV burst); then thermal (C5) and optimiser (C6).
+- Open: degradation factors, S_T and the shear-dominated policy are assumptions; progressive failure is cylinder only; free-plate CLT for unsymmetric walls; isotensoid dome profile not implemented; C1 data unverified against the original PDFs.
