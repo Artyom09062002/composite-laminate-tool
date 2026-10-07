@@ -24,7 +24,7 @@
         "unit": "deg F",
         "derived_deg_C": 121.11111111111111,
         "source": "Kriz, Stinchcomb & Tenney, NASA-CR-162921 (1980)",
-        "note": "Measured stress-free range was 250-300 deg F and 250 deg F was selected for the report's residual-stress analysis; nominal cure was 350 deg F."
+        "note": "NASA-CR-162921 uses 250 deg F as a Hahn-approximation stress-free temperature for residual-stress calculations and says this is considerably below the 350 deg F nominal cure; this is not a reported measured range."
       },
       "references": [
         {"citation": "C. B. York, Influence of Bending-Twisting Coupling on Compression Buckling Strength (2015), Table 2.", "url": "https://eprints.gla.ac.uk/105827/1/105827.pdf"},
@@ -41,7 +41,7 @@
         "unit": "deg F",
         "derived_deg_C": 165.55555555555554,
         "source": "3M Scotchply Reinforced Plastic Type 1002 technical data, section 1.8",
-        "note": "Manufacturer press-cure temperature; no measured stress-free temperature was found, so cure temperature is used as the reference."
+        "note": "Manufacturer press-cure temperature; used here as an assumed stress-free reference, not as a measured stress-free temperature."
       },
       "references": [
         {"citation": "C. B. York, Influence of Bending-Twisting Coupling on Compression Buckling Strength (2015), Table 2.", "url": "https://eprints.gla.ac.uk/105827/1/105827.pdf"},

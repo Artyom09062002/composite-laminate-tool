@@ -10,9 +10,20 @@ and equilibrium under an optional mechanical load is
 
     ABD {epsilon0, kappa} = {N_mech, M_mech} + {N_T, M_T}.
 
-Recovered ply stress is ``Q (epsilon_12 - alpha_12 dT)``.  Properties are
-constant with temperature; moisture, creep, cure chemistry and chemical
-shrinkage are outside this model.
+Recovered ply stress is ``Q (epsilon_local_total - alpha_local dT)``. CTE shear
+is d(gamma)/dT, twice the tensor shear CTE. A reference temperature must be an
+assumed or calibrated effective stress-free temperature, not automatically the
+nominal cure temperature. Independently calibrated monolithic references do
+not establish the stress-free state of a co-cured hybrid.
+
+Properties are constant with temperature and dT is constant within each ply
+(a scalar or one value per material, not a through-thickness temperature
+profile). Moisture, creep/relaxation, cure chemistry, chemical shrinkage,
+damage evolution, fibre-matrix microstresses and interlaminar stresses are
+outside this model. Linear Kirchhoff kinematics do not determine the stable
+large-deflection shape of a strongly warped unsymmetric laminate. With zero
+mechanical loads the laminate is free to extend, shear and curve; tool/end
+restraints need prescribed strain/curvature and reaction equilibrium.
 """
 
 from dataclasses import dataclass
@@ -102,7 +113,11 @@ def compute_thermal_resultants(
     materials: list,
     delta_temperature,
 ) -> ThermalResultants:
-    """Integrate the uniform-temperature thermal resultants ``N_T`` and ``M_T``."""
+    """Integrate equivalent ``N_T`` [N/m] and ``M_T`` [N], with constant dT per material.
+
+    These are eigenstrain-induced equivalent loads, not external reactions.
+    Actual external resultants equal ABD @ [epsilon0, kappa] - [N_T, M_T].
+    """
 
     dT_by_material = _temperature_changes(delta_temperature, materials)
     if len(layup) != len(stiffness.qbars):

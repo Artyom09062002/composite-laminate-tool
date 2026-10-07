@@ -109,6 +109,52 @@ class ThermalMechanicsTests(unittest.TestCase):
     def test_cryogenic_delta_is_final_minus_reference(self):
         self.assertAlmostEqual(temperature_change_from_reference(121.11111111111111, -196.0), -317.1111111111111)
 
+    def test_cte_matches_independent_tensor_rotation_including_engineering_shear(self):
+        alpha = np.array([1e-6, 25e-6, 3e-6])
+        tensor_local = np.array([[alpha[0], alpha[2] / 2], [alpha[2] / 2, alpha[1]]])
+        for angle in (-73., -45., 0., 31., 45., 90.):
+            c, s = np.cos(np.deg2rad(angle)), np.sin(np.deg2rad(angle))
+            rotation = np.array([[c, -s], [s, c]])
+            tensor = rotation @ tensor_local @ rotation.T
+            expected = [tensor[0, 0], tensor[1, 1], 2 * tensor[0, 1]]
+            np.testing.assert_allclose(transform_cte(*alpha[:2], angle, alpha[2]), expected, atol=1e-20)
+            local_material = {**MATERIAL, "alpha12": alpha[2]}
+            layup = [{"theta": angle, "t": PLY_T, "mat": 0}]
+            stiffness = assemble_laminate_stiffness(layup, [local_material])
+            response = recover_thermal_response(stiffness, layup, [local_material], -100.)
+            for point in response.ply_surfaces:
+                np.testing.assert_allclose(point.local_stress, 0., atol=1e-6)
+
+    def test_unsymmetric_hybrid_recovers_external_force_and_moment_equilibrium(self):
+        materials = [MATERIAL, {**MATERIAL, "E1": 38.6e9, "alpha1": 8.6e-6, "alpha2": 22.1e-6}]
+        layup = [{"theta": 31., "t": .00013, "mat": 0},
+                 {"theta": -62., "t": .00020, "mat": 1},
+                 {"theta": 4., "t": .00017, "mat": 0}]
+        stiffness = assemble_laminate_stiffness(layup, materials)
+        for loads in (None, np.array([17000., -6000., 2300., .7, -.4, .2])):
+            response = recover_thermal_response(stiffness, layup, materials, [-100., -130.], loads)
+            force, moment = np.zeros(3), np.zeros(3)
+            for index, ply in enumerate(layup):
+                a, b = stiffness.z[index:index + 2]
+                bottom, top = response.ply_surfaces[2 * index:2 * index + 2]
+                sb = transform_stress_strain(bottom.local_stress, -ply["theta"], "stress")
+                st = transform_stress_strain(top.local_stress, -ply["theta"], "stress")
+                slope = (st - sb) / (b - a)
+                intercept = sb - slope * a
+                force += intercept * (b - a) + slope * (b**2 - a**2) / 2
+                moment += intercept * (b**2 - a**2) / 2 + slope * (b**3 - a**3) / 3
+            np.testing.assert_allclose(np.r_[force, moment], np.zeros(6) if loads is None else loads,
+                                       rtol=1e-12, atol=2e-8)
+
+    def test_stack_reversal_changes_thermal_curvature_sign(self):
+        layup, stiffness, response = self.response([0., 31., -62.])
+        reverse = list(reversed(layup))
+        reverse_stiffness = assemble_laminate_stiffness(reverse, [MATERIAL])
+        reversed_response = recover_thermal_response(reverse_stiffness, reverse, [MATERIAL], -100.)
+        self.assertGreater(np.linalg.norm(response.curvature), 1.)
+        np.testing.assert_allclose(reversed_response.midplane_strain, response.midplane_strain, atol=1e-16)
+        np.testing.assert_allclose(reversed_response.curvature, -response.curvature, atol=1e-12)
+
 
 class ThermalSourceTests(unittest.TestCase):
     def test_built_in_thermal_values_are_sourced_in_validation_data(self):
@@ -121,6 +167,9 @@ class ThermalSourceTests(unittest.TestCase):
         self.assertAlmostEqual(graphite.alpha2 * 1e6, data["T300_5208"]["alpha2"]["value"])
         self.assertAlmostEqual(glass.alpha1 * 1e6, data["SCOTCHPLY_1002"]["alpha1"]["value"])
         self.assertAlmostEqual(glass.alpha2 * 1e6, data["SCOTCHPLY_1002"]["alpha2"]["value"])
+        self.assertIn("approximation", graphite.thermal_reference_basis)
+        self.assertNotIn("Measured stress-free", graphite.thermal_reference_basis)
+        self.assertIn("assumed", data["SCOTCHPLY_1002"]["reference_temperature"]["note"])
 
 
 @unittest.skipUnless(importlib.util.find_spec("streamlit"), "streamlit is not installed")
@@ -145,6 +194,18 @@ class ThermalFailureTabTests(unittest.TestCase):
         self.assertEqual([error.value for error in at.exception], [])
         metrics = {metric.label: metric.value for metric in at.metric}
         self.assertAlmostEqual(float(metrics["Active ΔT [°C]"]), -317.1, places=1)
+
+    def test_reference_cooling_uses_the_explicit_common_stress_free_temperature(self):
+        from streamlit.testing.v1 import AppTest
+        app = pathlib.Path(__file__).resolve().parents[1] / "app.py"
+        at = AppTest.from_file(str(app), default_timeout=120).run()
+        at.selectbox(key="thermal_case").set_value("Cool from reference to final temperature")
+        at.number_input(key="thermal_common_reference").set_value(200.)
+        at.number_input(key="thermal_final_temperature").set_value(20.).run()
+        self.assertEqual([error.value for error in at.exception], [])
+        metrics = {metric.label: metric.value for metric in at.metric}
+        self.assertEqual(float(metrics["Active ΔT [°C]"]), -180.)
+        self.assertTrue(any("user-assumed common" in item.value for item in at.caption))
 
 
 if __name__ == "__main__":

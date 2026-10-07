@@ -41,6 +41,16 @@ Unidirectional stack recovers E1/E2/G12/nu12; quasi-isotropic Ex=Ey and Gxy=Ex/(
 - [0/90]s cooling: tensile transverse stress in the 0 plies (sign check), zero net force.
 
 ## Optimiser (C6)
-- One allowed angle returns that angle.
-- Fibre-limited optimum for a thin cylinder lies near the netting angle.
-- Deterministic (fixed seed).
+- One allowed angle returns that angle, including an odd physical ply count and -90 degrees.
+- The T300/5208 fibre-projection bound reaches the independent closed-cylinder netting oracle at +/-atan(sqrt(2)). This metric is a projection bound, not CLT fibre rupture; angle mixtures can tie it.
+- Fixed seed, reordered angle input and deterministic tie breaking reproduce identical results; a local RNG preserves global random state.
+- Fixed physical ply count/thickness/material, allowed angles, symmetry, unique candidates, exhaustive small spaces and separate first-ply/last-ply rankings are checked.
+- Candidate pressures reproduce the existing first-ply and progressive models, honour the supplied discount rules, and scale inversely with radius.
+- Pressure vessel UI runs on a button, shows top five and the continuous netting reference, reranks without a new search, hides stale results, and handles one/no selected angles.
+- Thermal review regressions: independent tensor CTE rotation including engineering shear, stress-free off-axis single ply, recovered force AND moment equilibrium of an unsymmetric hybrid, reversed-stack curvature sign, explicit common reference in the UI.
+- C6 current verification (7 October 2026): 144/144 tests pass via `python -m unittest discover -s tests -v`; mechanics equations in core/thermal.py unchanged. Review decisions: verification/REVIEW_C6.md.
+
+## Snapshot (R0)
+- tests/snapshot_v3.json holds the key outputs at the app defaults (T300/5208): laminate A/B/D and first-ply of [0,45,-45,90]s; vessel first-ply, last-ply and netting for that layup and for the +/-54.74 deg wall; dome and thermal headline numbers; optimiser best candidates.
+- tests/test_snapshot_v3.py recomputes them and requires equality to relative 1e-9 (plus an absolute 1e-12 for round-off zeros); verified on Linux and Windows. Regenerate only for a confirmed error fix (`python tests/snapshot_v3_values.py --write`).
+- R0 current verification (7 October 2026): 146/146 tests pass, 0 skipped with streamlit and reportlab installed. Audit: verification/AUDIT_R0.md.

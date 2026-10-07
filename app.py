@@ -15,12 +15,30 @@ from core import (
     recover_thermal_response, temperature_change_from_reference, transform_Q, tsai_wu_load_factor,
 )
 from core.dome import cylinder_winding_angle_deg, dome_stations
+from core.optimise import DEFAULT_ANGLES, optimise_cylinder
 from core.progressive import DegradationRules, progressive_failure
 from core.vessel import NETTING_ANGLE_DEG, cylinder_resultants
 from examples.spar_cap import MATERIAL_SOURCE, analyze_spar_cap
 from materials import DEFAULT_MATERIALS
 from workflow import (first_ply_limit, angle_ply_wall, assess_design, editor_to_layup, is_balanced, is_symmetric,
                       parse_layup, screen_cylinder)
+
+
+@st.cache_data(show_spinner=False)
+def cached_cylinder_optimisation(radius, count, thickness, ply_material, allowables, angles, budget, rules):
+    return optimise_cylinder(radius, count, thickness, ply_material, allowables, angles,
+                             max_candidates=budget, seed=2026, rules=rules)
+
+
+def symmetric_layup_label(angles):
+    """Compact explicit half-stack, in bottom-to-top order; s mirrors it."""
+    groups = []
+    for angle in angles[:len(angles) // 2]:
+        if groups and groups[-1][0] == angle:
+            groups[-1][1] += 1
+        else:
+            groups.append([angle, 1])
+    return "[" + ", ".join(f"{a:.2f}" + (f" ×{n}" if n > 1 else "") for a, n in groups) + "]s"
 
 try:
     from report import build_pdf_report
@@ -602,7 +620,7 @@ with tabs[5]:
                                             for name in ("α₁ [µm/(m·K)]", "α₂ [µm/(m·K)]",
                                                          "α₁₂ [µm/(m·K)]", "Reference [°C]")})
 
-                input_cols = st.columns(3)
+                input_cols = st.columns(4)
                 thermal_case = input_cols[0].selectbox(
                     "Thermal case",
                     ["Direct ΔT", "Cool from reference to final temperature"],
@@ -615,6 +633,13 @@ with tabs[5]:
                     "Chosen final / cryogenic temperature [°C]", value=-196.0, step=10.0,
                     key="thermal_final_temperature",
                 )
+                common_reference = input_cols[3].number_input(
+                    "Assumed common stress-free temperature [°C]",
+                    value=float(thermal_records[active_materials[0]].thermal_reference_temperature_c),
+                    step=10.0, key="thermal_common_reference",
+                    help="A modelling assumption for this assembled laminate, not automatically its cure temperature. "
+                         "Individual material references above do not establish a co-cured hybrid's stress-free state.",
+                )
                 combine_mechanical = st.checkbox(
                     "Add the sidebar mechanical loads to the displayed ply stresses",
                     value=True, key="thermal_combine_mechanical",
@@ -624,13 +649,8 @@ with tabs[5]:
                     temperature_changes = float(direct_delta)
                     active_changes = [float(direct_delta)] * len(active_materials)
                 else:
-                    temperature_changes = np.zeros(len(materials_list), dtype=float)
-                    for index, record in enumerate(thermal_records):
-                        if record is not None:
-                            temperature_changes[index] = temperature_change_from_reference(
-                                record.thermal_reference_temperature_c, final_temperature
-                            )
-                    active_changes = [temperature_changes[index] for index in active_materials]
+                    temperature_changes = temperature_change_from_reference(common_reference, final_temperature)
+                    active_changes = [temperature_changes] * len(active_materials)
 
                 try:
                     residual = recover_thermal_response(
@@ -686,7 +706,8 @@ with tabs[5]:
                     st.caption(
                         f"The thermal-preload factor holds residual stress fixed and scales only the sidebar mechanical loads; "
                         f"control: ply {critical_thermal.ply}, {critical_thermal.surface.lower()} face, {thermal_criterion}. "
-                        "The direct case applies one ΔT to every ply; the reference-to-final case uses each material's listed reference temperature."
+                        "Both cases apply one ΔT to every ply; reference-to-final cooling uses the user-assumed common stress-free temperature. "
+                        "Listed individual references are provenance, not a calibrated hybrid cure state."
                     )
 
                 cited_records = []
@@ -698,7 +719,9 @@ with tabs[5]:
                             f"{record.name}: [CTE source]({record.cte_source_url}); "
                             f"[reference-temperature source]({record.temperature_source_url})."
                         )
-                st.caption("Moisture, creep, and temperature-dependent properties are not modelled. Cure chemistry and chemical shrinkage are also excluded.")
+                st.caption("Moisture, creep, and temperature-dependent properties are not modelled. Cure chemistry and chemical shrinkage are also excluded. "
+                           "Temperature is uniform through the wall; the laminate is free to extend and curve. Tool restraints, interlaminar and "
+                           "fibre–matrix microstresses, damage evolution and large-deflection warpage are excluded. Cryogenic results extrapolate constant properties.")
 
 with tabs[6]:
     st.subheader("Compare candidate layups under the current material and loads")
@@ -921,6 +944,79 @@ with tabs[7]:
                        "this is not a stability analysis (snap-through is not detected). Not modelled: open holes, fatigue, impact, moisture and "
                        "temperature, manufacturing defects, fibre kinking, crack growth, leakage and interlaminar strength. Use one computational ply per physical ply; "
                        "there is no fracture-energy regularisation.")
+    with st.container(border=True):
+        st.markdown("**Fixed-mass cylinder layup optimiser**")
+        st.caption("Screening tool, not a design. Uses the sidebar material, radius, wall ply count and ply thickness above. "
+                   "All candidates have the same physical ply count and thickness, hence the same mass. "
+                   "Searches symmetric angle counts with canonical mirrored ordering; unbalanced candidates allow CLT shear strain. "
+                   "No liner, thermal preload, end restraints, winding feasibility or stability analysis.")
+        with st.form("cylinder_optimiser_form"):
+            opt_cols = st.columns([3, 1])
+            opt_angles = opt_cols[0].multiselect(
+                "Allowed optimiser angles [deg]", options=list(DEFAULT_ANGLES), default=list(DEFAULT_ANGLES),
+                format_func=lambda angle: f"{angle:+.2f}°", key="optimiser_angles",
+            )
+            opt_budget = int(opt_cols[1].number_input(
+                "Candidate budget", min_value=32, max_value=512, value=128, step=32, key="optimiser_budget",
+            ))
+            opt_run = st.form_submit_button("Search cylinder layups", key="optimiser_run")
+        objective_label = st.selectbox(
+            "Optimiser ranking", ["First-ply pressure", "Last-ply model stop", "Fibre-only projection bound"],
+            key="optimiser_objective",
+        )
+        objective_key = {"First-ply pressure": "first_ply", "Last-ply model stop": "last_ply",
+                         "Fibre-only projection bound": "fibre_limit"}[objective_label]
+        opt_rules = degradation if stiffness is not None else DegradationRules()
+        opt_config = (radius_m, wall_plies, ply_thickness_m, dict(material), strengths,
+                      tuple(sorted(opt_angles)), opt_budget, opt_rules)
+        if opt_run:
+            st.session_state.pop("cylinder_optimiser_result", None)
+            if wall_plies % 4:
+                st.error("Use a multiple of 4 wall plies for the cylinder comparison above.")
+            else:
+                try:
+                    with st.spinner("Evaluating fixed-mass cylinder candidates…"):
+                        opt_result = cached_cylinder_optimisation(*opt_config)
+                except (ValueError, np.linalg.LinAlgError, RuntimeError) as error:
+                    st.error(f"Cylinder search cannot run: {error}")
+                else:
+                    st.session_state.cylinder_optimiser_result = (opt_config, opt_result)
+        saved_opt = st.session_state.get("cylinder_optimiser_result")
+        if saved_opt is not None and saved_opt[0] == opt_config:
+            opt_result = saved_opt[1]
+            opt_reference = opt_result.netting_reference
+            opt_metrics = st.columns(4)
+            opt_metrics[0].metric("Optimiser netting angle", f"±{NETTING_ANGLE_DEG:.2f}°")
+            opt_metrics[1].metric("Optimiser netting ideal [MPa]", f"{opt_result.netting_optimum_pressure_pa / 1e6:.3f}")
+            opt_metrics[2].metric("±netting first-ply [MPa]", f"{opt_reference.first_ply_pressure_pa / 1e6:.3f}")
+            opt_metrics[3].metric("±netting model stop [MPa]", f"{opt_reference.last_ply_pressure_pa / 1e6:.3f}")
+            opt_rows = []
+            for rank, candidate in enumerate(opt_result.top_for(objective_key), 1):
+                opt_rows.append({
+                    "Rank": rank, "Layup (half-stack)s": symmetric_layup_label(candidate.angles_deg),
+                    "Balanced": candidate.balanced,
+                    "First-ply [MPa]": candidate.first_ply_pressure_pa / 1e6,
+                    "Last-ply model stop [MPa]": candidate.last_ply_pressure_pa / 1e6,
+                    "Fibre projection bound [MPa]": candidate.fibre_limit_pressure_pa / 1e6,
+                    "First / netting ideal": candidate.first_ply_pressure_pa / opt_result.netting_optimum_pressure_pa,
+                    "Last / netting ideal": candidate.last_ply_pressure_pa / opt_result.netting_optimum_pressure_pa,
+                })
+            st.dataframe(pd.DataFrame(opt_rows), hide_index=True, width="stretch",
+                         column_config=fmt(None, "%.3f", ["First-ply [MPa]", "Last-ply model stop [MPa]",
+                                                         "Fibre projection bound [MPa]", "First / netting ideal", "Last / netting ideal"]))
+            st.caption(f"Top {len(opt_rows)} by {objective_label.lower()}; {opt_result.search_method}: "
+                       f"{opt_result.evaluated_count} / {opt_result.total_count_vectors:,} count vectors, seed {opt_result.seed}. "
+                       f"Fixed wall thickness {wall_plies * ply_thickness_m * 1e3:g} mm; s mirrors the half-stack. "
+                       "A sampled search does not prove a global optimum.")
+            with st.expander("Optimiser methods and assumptions"):
+                st.caption("First-ply uses the minimum Maximum Stress / Tsai–Wu pressure. Last-ply is the existing Hashin discount model stop "
+                           "with the degradation factors above; it is not a validated burst pressure. "
+                           "The fibre projection bound is not a CLT fibre-rupture check and may be unattainable for unbalanced stacks. "
+                           "Netting ideal = 2Xt·h/(3R), a separate fibre-only reference that may lie outside the allowed grid. "
+                           "Equal pressures at 12 significant digits favour balanced stacks nearest the netting angle.")
+                st.caption(opt_result.progressive_assumptions)
+        elif saved_opt is not None:
+            st.info("Search inputs changed; run Search cylinder layups again to refresh the top five.")
     st.divider()
     st.markdown("**Dome: geodesic winding into the polar opening**")
     st.write("On a dome the fibres follow geodesics, so the polar opening r₀ fixes the winding angle: α₀ = asin(r₀/R) on the cylinder, "
