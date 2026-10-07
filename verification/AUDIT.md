@@ -28,13 +28,11 @@ Deferred: R6 original-page extraction; personal A1-A5; temperature-dependent pro
 
 Completion audit: all mandatory AI stages R0b, R1-R5, G2 and R7 have the file/test/runtime evidence listed above. R0 was the preserved baseline. Optional R6 was deferred because A5 pages were not supplied; A1-A5 were explicitly excluded by the user. Git push succeeded for d83851c and b21ae01; the public application displayed the revised labels and all eleven tabs and served its cylinder PDF. No core or snapshot difference from 116a072, no removed tests, no added application dependencies, physics modules, tabs or navigation modes.
 
-## Earlier verified mechanics
-
 ## Professor-facing follow-up
 
 `verification/PROFESSOR_PASS.md` records nine confirmed interpretation/input-reporting findings and their fixes. The operating route is `DEMO_ROUTE.md`; limitations are in `LIMITS_BEFORE_SHOW.md`. They are technical guides, not the user's personal A1-A5 deliverables. The quiz reuses the existing angle study and follows its 0/90 endpoints. Mechanical summary, thermal no-load face, edited-card provenance, unbalanced netting and large-strain extrapolation are qualified explicitly. The PDF now prints actual sidebar elastic and strength inputs.
 
-Current suite: 163 passed, zero skipped, including unchanged snapshot and the extended PDF page/value checks. Core, material/source records, validation numbers and dependencies remain unchanged. Visual QA confirmed the revised sample remains one page without clipping. Native browser/live evidence is refreshed for the follow-up deployment; previous v4 records above retain their historical counts.
+Current suite: 163 passed, zero skipped, including unchanged snapshot and the extended PDF page/value checks. Core, material/source records, validation numbers and dependencies remain unchanged. Visual QA confirmed the revised sample remains one page without clipping. After 43969b3, all eleven local/live tabs were clicked without errors, and both cylinder downloads contained one page with identical extracted text, including actual material inputs and large-strain qualification. Evidence: verification/live_browser_qa.json; previous v4 records above retain their historical counts.
 
 ## Earlier benchmark details
 

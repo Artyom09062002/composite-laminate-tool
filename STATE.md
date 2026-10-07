@@ -5,6 +5,6 @@
 - R2/R3: shared style, 15-term glossary, visible unscored-validation status, model limits, coloured initiation events and dome edge shading.
 - R4: existing one-page PDF export covers mechanical summary and cylinder pressures/curve; 4/16/40-ply page/number tests pass; Report No. 2 wording/wrapping corrected.
 - R5/G2 + professor pass: input/text fixes, custom-card quiz, thermal/mechanical scope, unbalanced netting and large-strain qualifiers; current suite 163 passed, 0 skipped; snapshot unchanged.
-- R7: baseline live checked at b21ae01; follow-up route DEMO_ROUTE.md and limits memo LIMITS_BEFORE_SHOW.md ready; revised export prints actual material inputs; browser evidence refreshed after deployment.
+- R7: professor pass deployed; all eleven local/live tabs and PDF download checked; PDFs are one page with identical extracted text; DEMO_ROUTE.md and LIMITS_BEFORE_SHOW.md ready.
 - Deferred: optional R6 awaits original pages (A5); personal A1-A5 remain user's work; no experimental burst validation, liner/boss, temperature-dependent properties or stability model.
 - After presentation: step-by-step navigation, failure animation, separate two-layup screen/report generator, new physics/tabs only after rescoping; isotensoid, fatigue, permeation, moisture, creep and 3D FE remain out of scope.
