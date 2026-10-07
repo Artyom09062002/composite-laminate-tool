@@ -22,7 +22,7 @@ Baseline: R0 commit `116a072`. User scope: complete the AI/application stages of
 
 R1 draft corrections: do not globally say Hashin never controls first-ply (the vessel reports its own Hashin initiation); apply that distinction only to the laminate summary. Manufacturing content is labelled background, rather than claimed as a computed process recommendation. Larger first-ply factors, netting ratios and implied radii are not presented as design safety factors or experimental validation.
 
-Import fix: app imports new thermal names directly from core.thermal. A regression removes those aggregate names from an already-cached core package and verifies app rendering. This reproduces the suspected stale-package condition; it does not claim access to redacted cloud logs. Mechanics are unchanged.
+Import fix: app imports new thermal names directly from core.thermal and conditionally refreshes a cached core package if established mechanics exports are missing. A regression removes engineering_constants and the thermal aggregate names from an already-cached core package and verifies app rendering. This reproduces the suspected stale-package condition; it does not claim access to redacted cloud logs. Mechanics are unchanged.
 
 Deferred: R6 original-page extraction; personal A1-A5; temperature-dependent properties, liner/boss load sharing, certified allowables, physical burst/ultimate prediction and stability remain outside the model. No experimental validation pass is claimed.
 

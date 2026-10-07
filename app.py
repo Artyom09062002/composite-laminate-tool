@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 import math
+import importlib
 
 import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+# Streamlit can retain a package object across source updates. Refresh only
+# when that object cannot supply the established public mechanics exports.
+import core as clt_core
+_core_exports = ("StrengthAllowables", "assemble_laminate_stiffness", "compute_Q_matrix",
+                 "engineering_constants", "evaluate_failure", "hashin", "recover_ply_surfaces",
+                 "transform_Q", "tsai_wu_load_factor")
+if any(not hasattr(clt_core, name) for name in _core_exports):
+    importlib.reload(clt_core)
 
 from core import (
     StrengthAllowables, assemble_laminate_stiffness, compute_Q_matrix, engineering_constants,

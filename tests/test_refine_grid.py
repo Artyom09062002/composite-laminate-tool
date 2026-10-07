@@ -29,7 +29,7 @@ class RefineGridTests(unittest.TestCase):
 
     def test_app_loads_with_cached_core_package_missing_thermal_exports(self):
         import core
-        names = ('first_ply_mechanical_load_factor', 'recover_thermal_response', 'temperature_change_from_reference')
+        names = ('engineering_constants', 'first_ply_mechanical_load_factor', 'recover_thermal_response', 'temperature_change_from_reference')
         saved = {name: getattr(core, name) for name in names}
         try:
             for name in names:

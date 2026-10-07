@@ -161,6 +161,6 @@ test_strength_and_load_validation (test_workflow.WorkflowTests.test_strength_and
 test_tsai_wu_multiplier_reaches_failure_and_zero_load_is_unbounded (test_workflow.WorkflowTests.test_tsai_wu_multiplier_reaches_failure_and_zero_load_is_unbounded) ... ok
 
 ----------------------------------------------------------------------
-Ran 161 tests in 49.844s
+Ran 161 tests in 53.481s
 
 OK
