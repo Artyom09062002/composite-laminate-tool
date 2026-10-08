@@ -1,0 +1,58 @@
+{
+  "kaw": {
+    "force_sum": [
+      1499.9999999999836,
+      -2.9103830456733704e-11,
+      -3.637978807091713e-12
+    ],
+    "forces": [
+      [
+        12919.635826790141,
+        -110584.93449398309,
+        -17892.500646723372
+      ],
+      [
+        -20595.97718942202,
+        -41942.22744338437,
+        33842.183534598094
+      ],
+      [
+        9176.341362631863,
+        152527.16193736743,
+        -15949.682887874726
+      ]
+    ],
+    "solution": [
+      0.0001623604830849953,
+      -0.0003532494264310038,
+      0.0004907720615009548,
+      -0.14028038901965076,
+      0.42103869896243284,
+      0.15359467258475765
+    ],
+    "literal_precision_exceptions": []
+  },
+  "vessel": {
+    "default_material": "Graphite/Epoxy (T300/5208)",
+    "radius_m": 0.1,
+    "working_pressure_pa": 10000000.0,
+    "loads": [
+      500000.0,
+      1000000.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "netting_angle_deg": 54.735610317245346,
+    "study_thickness_m": 0.002,
+    "study_netting_pressure_pa": 20000000.0,
+    "study_first_ply_pressure_pa": 8860009.649984905,
+    "best_first_ply_pressure_pa": 8914725.26949969,
+    "best_angle_deg": 54,
+    "current_first_ply_pressure_pa": 2963144.071581147,
+    "current_netting_pressure_pa": 7500000.0,
+    "current_hashin_first_pressure_pa": 2963144.071581147,
+    "current_model_stop_pressure_pa": 6028078.770834283
+  }
+}

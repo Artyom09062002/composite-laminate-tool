@@ -46,3 +46,24 @@ def recover_ply_surfaces(stiffness: LaminateStiffness, layup: list, materials: l
             local_stress = q @ local_strain
             surfaces.append(PlySurfaceResponse(index + 1, float(ply["theta"]), surface, float(z), global_strain, local_strain, local_stress))
     return LaminateResponse(base.midplane_strain, base.curvature, tuple(surfaces))
+
+
+def ply_force_resultants(stiffness: LaminateStiffness, layup: list, materials: list,
+                         loads: np.ndarray) -> np.ndarray:
+    """Exact per-ply global [Nx, Ny, Nxy] integrals [N/m], shape (n_plies, 3).
+
+    Inputs must describe the same assembled laminate, as for surface recovery.
+    Reuse its Q-bars and mechanical ABD solution; no thermal eigenstrain is
+    included. Rows follow the established -h/2 to +h/2 ply order. Moments
+    affect these forces through curvature, even if applied N is zero.
+    """
+    if len(layup) != len(stiffness.qbars):
+        raise ValueError("layup length does not match the assembled laminate")
+    for ply in layup:
+        materials[ply["mat"]]  # same material-index contract as surface recovery
+    base = solve_laminate_response(stiffness, loads)
+    return np.array([
+        qbar @ (base.midplane_strain * (z1 - z0)
+                + base.curvature * (z1**2 - z0**2) / 2.0)
+        for qbar, z0, z1 in zip(stiffness.qbars, stiffness.z[:-1], stiffness.z[1:])
+    ])

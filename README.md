@@ -22,7 +22,7 @@ On Windows, double-clicking `START_APP.cmd` creates a virtual environment, insta
 
 ## Conventions
 
-- SI units internally (Pa, m, N). Display: moduli and stresses in GPa/MPa, thickness in mm, loads in kN/m and N·m/m, A in MN/m, B in N, D in N·m, strain in µε, curvature in 1/m.
+- SI units internally (Pa, m, N). Display: moduli and stresses in GPa/MPa, thickness in mm, sidebar forces in N/m and moments per width in N·m/m (= N), A in MN/m, B in N, D in N·m, strain in µε, curvature in 1/m. Existing load presets retain their physical values.
 - Plane-stress order `[σ1, σ2, τ12]` and `[ε1, ε2, γ12]`, with engineering shear strain.
 - Positive ply angle: counter-clockwise from the global x-axis to the fibre axis 1.
 - Plies are listed from the `−h/2` face to the `+h/2` face; `z` is measured upward from the mid-plane.
@@ -37,6 +37,7 @@ On Windows, double-clicking `START_APP.cmd` creates a virtual environment, insta
 | `materials/` | Reference material data with sources |
 | `examples/` | Wind-blade spar-cap example (unsymmetric thick panel) |
 | `app.py` | Streamlit interface |
+| `verification_view.py` | Fixed Kaw source/app comparison, independent of sidebar inputs, with midpoint recovery and source-digit tolerances |
 | `tests/` | Automated tests (R0 baseline: 146; current run evidence in `verification/AUDIT.md`) (snapshot of key numbers, mechanics properties, reference values, hybrids, bending, engineering constants, pressure vessel, dome, Hashin, progressive failure, thermal response, optimiser, review regressions, app wiring, report, input validation) |
 | `verification/` | Reference-value script, the engineering audit log (`AUDIT.md`) and the verdicts on the two independent reviews: dome (`REVIEW_C3.md`) and Hashin / progressive failure (`REVIEW_C4.md`) |
 | `validation/` | Burst-test cases (`data.json`, unverified), the runner `run_validation.py`, `results.json`, tables and chart in `README.md`; result: no like-for-like comparison was possible (see its README) |
@@ -54,7 +55,13 @@ CTEs are sourced from [York (2015), Table 2](https://eprints.gla.ac.uk/105827/1/
 
 The ranked top five can use `first_ply` (the existing Maximum Stress/Tsai–Wu minimum), `last_ply` (the existing Hashin progressive-failure stopping point), or `fibre_limit` (a netting-theory projection upper bound, not a CLT fibre-rupture prediction). Every candidate is evaluated for both first-ply failure and progressive stopping, using the supplied degradation rules. Results are compared with the continuous netting-theory reference, θ = atan(√2) and p = 2Xt h/(3R); a ±θ CLT/progressive comparison is included only when n is divisible by four. This compact button-run UI reports candidates and does not apply a result to the current layup. Changed inputs hide stale rankings until the search is rerun. Unbalanced stacks allow CLT shear strain without end restraints; their exact fibre-only netting pressure is not reported because the existing axial/hoop solver does not enforce shear equilibrium. Ties at 12 significant digits prefer balanced stacks nearest the netting angle, then lexicographic angles. The fixed-seed search is a bounded sample, not a global-optimality guarantee, and neither the netting bound nor these screening predictions are burst validated. Netting is a separate fibre-only model, not an upper bound on matrix-bearing CLT.
 
-Reproduce the end-of-task thermal PDF with `python reports/make_report_c5.py` (existing ReportLab dependency). The complete source-controlled test suite is `python -m unittest discover -s tests -v`; ignored `_local/old_files` contains obsolete local tests and is outside that suite.
+Reproduce the end-of-task thermal PDF with `python reports/make_report_c5.py` (existing ReportLab dependency). The complete source-controlled test suite is `python -m unittest discover -s tests -v`. Obsolete local tests and scratch files were moved outside the repository; see `verification/CLEANUP_2026-10-08.md` for the recoverable archive and retained files.
+
+## Kaw verification and ply forces
+
+The Response tab integrates global Nx, Ny and Nxy through each ply exactly, including curvature effects; zero applied components have n/a shares. The Verification tab compares fixed [30/-45/-60] glass/epoxy source inputs with fresh Qbar/ABD, midplane, local strain/stress and ply-force results at the same numeric z. Source Top corresponds to app Bottom in this algebraic comparison; engineering shear and app conventions are unchanged.
+
+Sources and precision notes: `verification/VERIFY_KAW_4_3.md`, `verification/KAW_SOURCE_TRANSCRIPTION.md` and `verification/VERIFY_DOC2_COMPARISON.md`. The full local stress table is from the supplied Doc2 image; its original publication page is NOT REPORTED. `python verification/verify_kaw_vessel.py` reproduces the PDF check and app-default cylinder arithmetic. [Russian pressure-vessel guide](docs/PRESSURE_VESSEL_EXPLAINED_RU.md) explains the tab; `verification/VERIFY_VESSEL_EXAMPLE.md` reproduces Roylance's equilibrium angle and explicitly leaves pressure/burst validation unresolved.
 
 ## Refinement v4
 
@@ -64,7 +71,7 @@ No physics module, dependency, tab or navigation mode was added. `core/`, source
 
 ![Existing pressure-strain chart with initiation-event colours](assets/screenshots/v4_pressure_curve.png)
 
-Current recorded suite: **163 tests passed, 0 skipped** (`verification/qa_results.json`). Independent thermal/optimiser review: `verification/REVIEW_thermal_optimise.md`; text review: `verification/TEXT_REVIEW_G2.md`; input cases: `verification/ROBUSTNESS_R5.md`. The saved sample export is `output/pdf/V4_screening_sample.pdf`.
+Current recorded suite: **175 tests passed, 0 skipped** (`verification/qa_results.json`, refreshed by `python verification/run_refine_qa.py`). Independent thermal/optimiser review: `verification/REVIEW_thermal_optimise.md`; text review: `verification/TEXT_REVIEW_G2.md`; input cases: `verification/ROBUSTNESS_R5.md`. The saved sample export is `output/pdf/V4_screening_sample.pdf`.
 
 For the professor-facing demonstration, use [the five-minute route](DEMO_ROUTE.md) and [the limitations memo](LIMITS_BEFORE_SHOW.md). The final reader review is in `verification/PROFESSOR_PASS.md`. The quiz follows the entered material, thermal/no-load wording is separated, and unbalanced netting and large-strain extrapolation are explicitly qualified. The PDF records the actual sidebar elastic and strength inputs.
 

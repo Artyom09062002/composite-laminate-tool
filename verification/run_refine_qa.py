@@ -15,7 +15,7 @@ record = {'date': datetime.now(timezone(timedelta(hours=5))).date().isoformat(),
           'tests_run': result.testsRun, 'failures': len(result.failures),
           'errors': len(result.errors), 'skipped': len(result.skipped),
           'successful': result.wasSuccessful(),
-          'scope': 'Numerical checks, unchanged v3 snapshot, AppTest presets, input boundaries, chart arrays and one-page PDF values.'}
+          'scope': 'Numerical checks, unchanged v3 snapshot, Kaw source comparisons, global ply-force equilibrium, AppTest presets and Verification sidebar independence, input boundaries, chart arrays and one-page PDF values.'}
 (ROOT / 'verification' / 'qa_results.json').write_text(json.dumps(record, indent=2)+'\n', encoding='utf-8')
 print(json.dumps(record))
 sys.exit(0 if result.wasSuccessful() and not result.skipped else 1)

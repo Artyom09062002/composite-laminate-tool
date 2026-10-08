@@ -29,9 +29,11 @@ from core.dome import cylinder_winding_angle_deg, dome_stations
 from core.optimise import DEFAULT_ANGLES, optimise_cylinder
 from core.progressive import DegradationRules, progressive_failure
 from core.vessel import NETTING_ANGLE_DEG, cylinder_resultants
+from core.response import ply_force_resultants
 from examples.spar_cap import MATERIAL_SOURCE, analyze_spar_cap
 from materials import DEFAULT_MATERIALS
 from presentation import validation_status, progressive_frames, failure_event_chart, dome_edge_bands
+from verification_view import render_kaw_verification
 from ui_theme import PALETTE, GLOSSARY, mode_style, STYLE_CSS, STATUS_BADGES_HTML
 from workflow import (first_ply_limit, angle_ply_wall, assess_design, editor_to_layup, is_balanced, is_symmetric,
                       parse_layup, screen_cylinder)
@@ -86,14 +88,28 @@ if "editor_version" not in st.session_state:
     st.session_state.editor_version = 0
 
 LOAD_KEYS = ("load_nx", "load_ny", "load_nxy", "load_mx", "load_my", "load_mxy")
+_legacy_load_presets = {
+    "Axial tension (Nx = 100 kN/m)": "Axial tension (Nx = 100000 N/m)",
+    "In-plane shear (Nxy = 50 kN/m)": "In-plane shear (Nxy = 50000 N/m)",
+    "Biaxial tension (Nx = Ny = 50 kN/m)": "Biaxial tension (Nx = Ny = 50000 N/m)",
+}
+# Preserve physical loads in sessions opened before the UI switched from kN/m.
+# This conversion happens once, before any load widget is instantiated.
+if st.session_state.get("load_units") != "N":
+    for _key in LOAD_KEYS[:3]:
+        if _key in st.session_state:
+            st.session_state[_key] *= 1e3
+    if st.session_state.get("load_preset") in _legacy_load_presets:
+        st.session_state.load_preset = _legacy_load_presets[st.session_state.load_preset]
+    st.session_state.load_units = "N"
 LOAD_PRESETS = {
-    "Axial tension (Nx = 100 kN/m)": (100.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-    "In-plane shear (Nxy = 50 kN/m)": (0.0, 0.0, 50.0, 0.0, 0.0, 0.0),
-    "Biaxial tension (Nx = Ny = 50 kN/m)": (50.0, 50.0, 0.0, 0.0, 0.0, 0.0),
+    "Axial tension (Nx = 100000 N/m)": (100000.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    "In-plane shear (Nxy = 50000 N/m)": (0.0, 0.0, 50000.0, 0.0, 0.0, 0.0),
+    "Biaxial tension (Nx = Ny = 50000 N/m)": (50000.0, 50000.0, 0.0, 0.0, 0.0, 0.0),
     "Bending (Mx = 50 N·m/m)": (0.0, 0.0, 0.0, 50.0, 0.0, 0.0),
     "Custom - type your own values below": None,
 }
-for _key, _value in zip(LOAD_KEYS, LOAD_PRESETS["Axial tension (Nx = 100 kN/m)"]):
+for _key, _value in zip(LOAD_KEYS, LOAD_PRESETS["Axial tension (Nx = 100000 N/m)"]):
     st.session_state.setdefault(_key, _value)
 
 
@@ -226,11 +242,12 @@ with st.sidebar:
         thickness_mm = st.number_input("Default ply thickness [mm]", min_value=0.001, format="%.3f", key="material_thickness",
                                        help="Thickness of one ply. Each ply can still be changed in the Layup tab.")
     with st.expander("2 · Applied loads", expanded=True):
-        st.caption("Forces and moments per unit width of the laminate. Pick a preset or type your own values.")
+        st.caption("SI loads per unit width: forces N/m; moments N·m/m (= N). "
+                   "The width divides the moment's metre, which is why its unit simplifies to N. Pick a preset or enter values.")
         st.selectbox("Load preset", list(LOAD_PRESETS), key="load_preset", on_change=apply_load_preset)
-        nx = st.number_input("Nx [kN/m]", key="load_nx", help="Force along x per unit width. Positive = tension.")
-        ny = st.number_input("Ny [kN/m]", key="load_ny", help="Force along y per unit width. Positive = tension.")
-        nxy = st.number_input("Nxy [kN/m]", key="load_nxy", help="In-plane shear force per unit width.")
+        nx = st.number_input("Nx [N/m]", key="load_nx", help="Force along x per unit width. Positive = tension.")
+        ny = st.number_input("Ny [N/m]", key="load_ny", help="Force along y per unit width. Positive = tension.")
+        nxy = st.number_input("Nxy [N/m]", key="load_nxy", help="In-plane shear force per unit width.")
         mx = st.number_input("Mx [N·m/m]", key="load_mx", help="Bending moment per unit width. Positive Mx gives positive curvature κx (top face in tension).")
         my = st.number_input("My [N·m/m]", key="load_my", help="Bending moment per unit width that bends the plate in the y-direction.")
         mxy = st.number_input("Mxy [N·m/m]", key="load_mxy", help="Twisting moment per unit width.")
@@ -246,7 +263,7 @@ material = {"E1": e1 * 1e9, "E2": e2 * 1e9, "G12": g12 * 1e9, "v12": v12}
 if selected is not None:
     material.update(alpha1=selected.alpha1, alpha2=selected.alpha2, alpha12=0.0)
 strengths = StrengthAllowables(*(value * 1e6 for value in (xt, xc, yt, yc, shear)))
-loads = np.array([nx * 1e3, ny * 1e3, nxy * 1e3, mx, my, mxy], dtype=float)
+loads = np.array([nx, ny, nxy, mx, my, mxy], dtype=float)
 ply_thickness_m = thickness_mm * 1e-3
 
 # Per-ply materials: index 0 is the sidebar material, the others are the cited datasets.
@@ -532,6 +549,21 @@ with tabs[4]:
                         column_config=fmt(None, "%.4f", ["Curvature [1/m]"]))
         st.write("Strain varies linearly through the thickness, ε(z) = ε⁰ + zκ, with z measured upward from the mid-plane; positive κx (from positive Mx) puts the top face in tension. "
                  "Ply stresses come from rotating the global strain into each ply's fibre axes and applying Q.")
+        st.markdown("**Load carried by each ply — global force resultants [N/m]**")
+        ply_forces = ply_force_resultants(stiffness, st.session_state.plies, materials_list, loads)
+        force_rows = []
+        for index, (ply, force) in enumerate(zip(st.session_state.plies, ply_forces)):
+            row = {"Ply": index + 1, "Angle [deg]": ply["theta"]}
+            for component, name in enumerate(("Nx", "Ny", "Nxy")):
+                row[f"{name}_k [N/m]"] = force[component]
+                row[f"{name} share [%]"] = ("n/a" if loads[component] == 0
+                                             else str(100.0 * force[component] / loads[component]))
+            force_rows.append(row)
+        st.dataframe(pd.DataFrame(force_rows), hide_index=True, width="stretch",
+                     alt="Global force resultants and applied-load shares for each ply")
+        st.caption("Shares can exceed 100% or be negative for unsymmetric laminates. "
+                   "The sum over plies must equal applied [Nx, Ny, Nxy]; n/a means that applied component is zero. "
+                   "These are exact through-thickness integrals of mechanical global stress, including bending effects.")
         surfaces = pd.DataFrame([{"Ply": p.ply, "Angle [deg]": p.angle_deg, "Face": p.surface,
                                   "z [mm]": p.z * 1e3, "ε₁ [µε]": p.local_strain[0] * 1e6,
                                   "ε₂ [µε]": p.local_strain[1] * 1e6, "γ₁₂ [µε]": p.local_strain[2] * 1e6,
@@ -802,6 +834,7 @@ with tabs[6]:
 
 with tabs[7]:
     st.subheader("Pressure vessel: filament-wound cylinder")
+    st.caption("netting and CLT estimates only; not validated against burst tests")
     st.markdown(STATUS_BADGES_HTML, unsafe_allow_html=True)
     st.caption("The default geometry and pressure are illustrative teaching inputs, not a specified hydrogen tank.")
     st.info("**What to do:** set the radius and the wall, then read the winding-angle study. The study uses the sidebar material; "
@@ -1235,9 +1268,12 @@ with tabs[9]:
 
 with tabs[10]:
     st.subheader("Verification and model limits")
-    st.warning(validation_status())
-    st.caption("Checked by tests means numerical/code checks, not experimental validation. R0 baseline: 146 tests; "
-               "current refinement coverage and run evidence are recorded in verification/AUDIT.md.")
+    st.warning("Pressure-vessel research cases: " + validation_status())
+    render_kaw_verification()
+    st.divider()
+    st.subheader("Other numerical checks and model limits")
+    st.caption("Checked by tests means numerical/code checks, not experimental validation. "
+               "Full-suite run evidence and file changes are recorded in STATE.md.")
     st.write("The suite also checks dome geometry and excluded edge stations, Hashin mode limits, progressive event ordering, "
              "thermal stress equilibrium and CTE rotation, deterministic fixed-mass optimisation, and the v3 numerical snapshot.")
     st.write("Automated checks cover Q̄(0°) = Q, rotation invariants, B ≈ 0 for symmetric stacks, closed-form all-0° A and D, sign reversal of B, "

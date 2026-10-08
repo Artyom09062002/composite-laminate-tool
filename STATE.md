@@ -1,5 +1,59 @@
 # STATE (v4 refinement)
 
+## Local reference documents excluded from Git — 2026-10-08
+
+- At the user's request, the four files in verification/sources/ are kept only on disk: Kaw_section4_3_worked_example.pdf, Roylance_netting.pdf, Roylance_pressure_vessels.pdf and Doc2.docx. The whole directory is ignored and removed from the amended commit's tracked tree; no source document was deleted locally and no push was performed.
+- Numeric reference data, VERIFY_*.md reports, source/page provenance and official Roylance links remain tracked. The Verification page computes from verification/kaw_reference.json and only offers source-document downloads when those local files are present. The previous entry about source documents being included in commit preparation is superseded by this exclusion.
+
+## Commit and repository cleanup — 2026-10-08
+
+- User explicitly requested committing all current work and cleaning old unnecessary files; this supersedes the earlier uncommitted-only instruction. All supplied sources, new guide, reference comparisons, tests and code changes are included in the commit preparation.
+- Moved ignored `_local/` and its associated `node_modules/` to `C:\Work\composite-engineering-app-archive\2026-10-08-cleanup\`: 442 files, 26087643 bytes, SHA256 checked before/after; manifest.json retained there. Generated Python/pytest caches and the empty `_kaw_render` directory were also moved out after testing. Direct deletion was policy-blocked; no cache/source file was permanently deleted. See verification/CLEANUP_2026-10-08.md.
+- Current sources, report artifacts, active tests/snapshot, existing Russian PDF guide, .git history and .venv preserved. README now documents sidebar SI loads and the Kaw/Doc2 Verification page; older audit/report dates are retained as historical evidence.
+- Before cleanup: 175 tests passed (49.702 s). After cleanup, `python verification/run_refine_qa.py`: 175 tests passed, 0 failures/errors/skips (97.665 s); qa_results.json and qa_test_log.txt refreshed. Validated equations remain unchanged. Local commit requested; no push requested.
+
+## Verification page from Doc2 — 2026-10-08
+
+- Inspected all 12 images in the supplied Doc2.docx. Verification now presents fixed Kaw source/app Qbar and full ABD matrices, midplane strains/curvatures, local strain/stress at both boundaries and each midpoint, and integrated ply forces/shares. Sidebar inputs do not alter this benchmark.
+- All 27 local stress values in the additional source table match fresh core predictions within printed-digit tolerances. No current mechanics defect was found. The full stress table is sourced to Doc2 image11.png; its original publication page is NOT REPORTED. Its absence from the earlier provided PDF remains correctly documented in the PDF-only report.
+- Full suite before this UI change: 171 tests, OK (53.081 s). Final full suite: 175 tests, OK, no skips (44.542 s), including AppTest angle switching and sidebar independence. Local browser inspection confirms rendering; temporary preview runs at http://localhost:8502.
+- Updated: app.py (Verification renderer and scoped vessel-dataset status), STATE.md. Created: verification_view.py, verification/kaw_reference.json, verification/sources/Doc2.docx, tests/test_verification_view.py, verification/VERIFY_DOC2_COMPARISON.md. Q/Qbar/ABD/transformations/failure/vessel mechanics unchanged; no commits or push.
+- Doc2 copy SHA256 matches the supplied file: 1A0D3EA2879952C732F21DFF99213343A3A9DB276852240FDFBE7AF38FEDB910. Extracted working images remain in ignored _local/doc2_review/.
+
+## Kaw / ply forces / vessel explanation — 2026-10-08
+
+- Full suite before changes: `python -m unittest discover -s tests -q`, 163 tests, OK, no skips (77.901 s). Final full suite: 171 tests, OK, no skips (77.422 s), including Streamlit AppTest. Intermediate 170-test run also passed before the requested sidebar-unit follow-up.
+- Added exact global mechanical ply-force integration and per-ply force/share table; zero applied components show n/a. Existing Q/Qbar/ABD/transforms/failure/progressive/vessel equations unchanged.
+- Sidebar forces now N/m, moments N·m/m (= N). Preset physical loads and existing-session loads are preserved; AppTest checks conversion once and presets. Pressure vessel received the requested burst-validation caption only.
+- Kaw: all printed stiffness, strain and stress values agree within their last-digit precision; part (e) forces agree within 2.5 N/m propagated from printed midpoint stress precision. Documented Poisson-substitution typo, clipped A/B/D expansions, and engineering shear mislabel. Source copy SHA256: BDD4ACF691D512DB40A925EA084DC134BEC4627D6AB4E3CB1D6A314F84FC732F (matches supplied Downloads PDF).
+- Vessel: reproduced Roylance's worked equilibrium angle; no comparable fully specified numerical netting pressure/thickness answer found in the inspected sources. The other published numerical bottle example uses strain-compatible fibre netting, unlike the app's pressure-bound solver; no forced comparison or tuning. Default-input core outputs are illustrative, not external strength validation.
+- Still unvalidated by this work: strengths/failure criteria, progressive/model-stop pressure, experimental burst pressure, liner and local dome/end effects. No files deleted, no commit or push.
+
+Changed tracked files:
+
+- [app.py](app.py)
+- [core/response.py](core/response.py)
+- [.gitignore](.gitignore) — whitelist only the new Russian guide; other docs remain ignored.
+- [STATE.md](STATE.md)
+
+Created deliverables:
+
+- [tests/test_ply_force_resultants.py](tests/test_ply_force_resultants.py)
+- [tests/test_app_ply_forces.py](tests/test_app_ply_forces.py)
+- [docs/PRESSURE_VESSEL_EXPLAINED_RU.md](docs/PRESSURE_VESSEL_EXPLAINED_RU.md)
+- [verification/KAW_SOURCE_TRANSCRIPTION.md](verification/KAW_SOURCE_TRANSCRIPTION.md)
+- [verification/VERIFY_KAW_4_3.md](verification/VERIFY_KAW_4_3.md)
+- [verification/VERIFY_VESSEL_EXAMPLE.md](verification/VERIFY_VESSEL_EXAMPLE.md)
+- [verification/verify_kaw_vessel.py](verification/verify_kaw_vessel.py)
+- [verification/kaw_vessel_results.json](verification/kaw_vessel_results.json)
+- [verification/sources/Kaw_section4_3_worked_example.pdf](verification/sources/Kaw_section4_3_worked_example.pdf)
+- [verification/sources/Roylance_pressure_vessels.pdf](verification/sources/Roylance_pressure_vessels.pdf)
+- [verification/sources/Roylance_netting.pdf](verification/sources/Roylance_netting.pdf)
+
+Ignored working evidence is retained in `_local/kaw_review/` (rendered PDF PNGs and script output); no source files were removed. All deliverables remain uncommitted.
+
+## Earlier status
+
 - R0: baseline 116a072; v3 snapshot retained; core/, source material values, validation numbers and dependencies unchanged.
 - R0b/R1: independent thermal/optimiser numerical review and clarity inventory saved in verification/; no confirmed equation defect.
 - R2/R3: shared style, 15-term glossary, visible unscored-validation status, model limits, coloured initiation events and dome edge shading.

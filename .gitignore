@@ -4,5 +4,7 @@ __pycache__/
 .streamlit/secrets.toml
 .venv/
 _local/
-docs/
+docs/*
+!docs/PRESSURE_VESSEL_EXPLAINED_RU.md
 node_modules/
+verification/sources/
