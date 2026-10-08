@@ -2,7 +2,7 @@
 
 Source: verification/sources/Doc2.docx, copied byte-for-byte from the supplied Downloads file. SHA256: 1A0D3EA2879952C732F21DFF99213343A3A9DB276852240FDFBE7AF38FEDB910.
 
-All 12 embedded images were inspected. Images 1, 2, 6, 8, 10 and 11 contain reference values; images 3, 4, 5, 7, 9 and 12 are app screenshots used as a presentation reference. Screenshot display digits are not substituted for fresh core predictions. Original publication page of the local stress table in image11.png: NOT REPORTED. The local strain table is also present in the supplied Kaw PDF p. 8.
+All 12 embedded images were inspected. Images 1, 2, 6, 8, 10 and 11 contain reference values; images 3, 4, 5, 7, 9 and 12 are app screenshots used as a presentation reference. Screenshot display digits are not substituted for fresh core predictions. Correction after visually reading PDF p. 9: the local stress table in image11.png is also present there as an embedded image. The local strain table is present in the supplied Kaw PDF p. 8.
 
 Verification now displays fixed Kaw inputs, source/app Qbar and ABD matrices, midplane solution, local strain/stress on boundaries and midpoints, and ply force shares. Values are paired by numeric z, not by the words Top and Bottom. No stiffness, transformation or failure equation was changed.
 

@@ -19,7 +19,7 @@ class KawComparisonTests(unittest.TestCase):
                         self.assertEqual(row['Check'],'Within source precision')
         self.assertGreater(points[3]['stress'][2],0)  # -45 ply, z=-0.0025
         self.assertIn('Doc2.docx',source['provenance']['local_stress'])
-        self.assertIn('NOT REPORTED',source['provenance']['local_stress'])
+        self.assertIn('PDF p. 9',source['provenance']['local_stress'])
 
     def test_source_decimal_precision_and_exact_zero(self):
         self.assertEqual(comparison_row('x','3.780',3.78049,'GPa','p.2')['Check'],'Within source precision')

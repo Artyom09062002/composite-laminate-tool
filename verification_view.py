@@ -127,7 +127,7 @@ def render_kaw_verification():
     st.markdown('**4 · Local strains and stresses through each ply**')
     st.caption('Includes each ply midpoint, as in your document. Source Top / Middle / Bottom maps to '
                'app Bottom / Middle / Top at the same numeric z. Local strain: PDF p. 8. '
-               'The full local stress table comes from the table image in Doc2.docx; its original publication page is NOT REPORTED.')
+               'The full local stress table is on PDF p. 9 as an image and is also reproduced in Doc2.docx.')
     display=[]; differences=[]
     for row, point in enumerate(points):
         description={'Ply':point['ply'],'Angle [deg]':point['angle'],'Source position':('Top','Middle','Bottom')[row%3],

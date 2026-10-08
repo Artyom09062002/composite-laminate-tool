@@ -129,7 +129,8 @@ def kaw_report():
     table_sections = [
         ('Top/middle/bottom global strain table',6,'global strain'),
         ('Top/middle/bottom global stress table',7,'global stress'),
-        ('Top/middle/bottom local strain table',8,'local strain')]
+        ('Top/middle/bottom local strain table',8,'local strain'),
+        ('Top/middle/bottom local stress table',9,'local stress')]
     for heading,page,kind in table_sections:
         part = transcription.split(heading,1)[1].split('\n\nThe ',1)[0].split('\n## ',1)[0]
         for line in part.splitlines():
@@ -149,6 +150,12 @@ def kaw_report():
                 c,s=math.cos(math.radians(layup[k]['theta'])),math.sin(math.radians(layup[k]['theta']))
                 hand=np.array([c*c*he[0]+s*s*he[1]+s*c*he[2],s*s*he[0]+c*c*he[1]-s*c*he[2],
                                -2*s*c*he[0]+2*s*c*he[1]+(c*c-s*s)*he[2]])
+            elif kind=='local stress':
+                actual=qa@transform_stress_strain(e,layup[k]['theta'],'strain')
+                c,s=math.cos(math.radians(layup[k]['theta'])),math.sin(math.radians(layup[k]['theta']))
+                local_hand=np.array([c*c*he[0]+s*s*he[1]+s*c*he[2],s*s*he[0]+c*c*he[1]-s*c*he[2],
+                                     -2*s*c*he[0]+2*s*c*he[1]+(c*c-s*s)*he[2]])
+                hand=qh@local_hand
             else:
                 actual=e; hand=he
             for i,source in enumerate(fields[3:]):
@@ -158,7 +165,7 @@ def kaw_report():
                             if outside else 'All reported Q, Qbar, A/B/D, midplane solution, point strain/stress and through-thickness table entries agree within half a unit of their last printed digit. No literal half-unit exceptions were found for these quantities.')
     text = '''# Verification: Kaw section 4.3
 
-Source: [provided PDF](sources/Kaw_section4_3_worked_example.pdf), copied byte-for-byte from the supplied Downloads file. All 10 pages were read as text; numerical image tables on pp. 6–8 were inspected visually. The expanded A/B/D arithmetic on p. 4 is clipped at the right edge: those missing terms could not be read. The announced local stress table is absent. Only visible data are used; absent entries are NOT REPORTED.
+Source: provided PDF, kept locally at verification/sources/Kaw_section4_3_worked_example.pdf and excluded from Git, copied byte-for-byte from the supplied Downloads file. All 10 pages were read as text; numerical image tables on pp. 6–9 were inspected visually. The expanded A/B/D arithmetic on p. 4 is clipped at the right edge: those missing terms could not be read. Correction: the local stress table is present as an image on p. 9; its initial omission from this report came from text extraction missing that image. Only visible data are used; absent entries are NOT REPORTED.
 
 The PDF identifies its material inputs as Table 2.1 (p. 1). The original book table itself was not supplied/read. No strength data are reported here. See [literal transcription](KAW_SOURCE_TRANSCRIPTION.md) for every visible input, matrix, table and result.
 

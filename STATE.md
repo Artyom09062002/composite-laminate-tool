@@ -1,5 +1,11 @@
 # STATE (v4 refinement)
 
+## Primary-source correction during presentation preparation — 2026-10-08
+
+- Visual rereading of the supplied Kaw PDF page 9 found the full local stress table as an embedded image. The earlier claims that this table was absent and its page was NOT REPORTED were incorrect; text extraction had omitted the image. Doc2 image11.png reproduces the same table.
+- Source transcription, reference provenance, Verification caption, report generator and README now identify PDF p. 9. All 27 values still agree within printed precision; no mechanics equation or numeric reference value was changed. Earlier source-absence entries below are superseded by this correction.
+- Reran the source-comparison generator and the complete suite after the correction: 175 tests, OK, no skips (92.643 s). A separate fresh run before the metadata correction also passed 175 tests (94.407 s). Presentation outputs are stored in the task workspace, not published as copies of the supplied PDF/Word documents.
+
 ## Cloud publication and hosting choice — 2026-10-08
 
 - User explicitly authorized push after local source exclusion. Pushed ba5496e to origin/main; remote HEAD matched the local commit. The four verification/sources/ documents were not in the pushed tree.

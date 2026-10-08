@@ -32,7 +32,7 @@
     "A": "Kaw supplied PDF p. 4", "B": "Kaw supplied PDF p. 4", "D": "Kaw supplied PDF p. 4",
     "solution": "Kaw supplied PDF p. 5",
     "local_strain": "Kaw supplied PDF p. 8, local strain table",
-    "local_stress": "Doc2.docx, embedded image11.png, local stress table (original publication page NOT REPORTED)",
+    "local_stress": "Kaw supplied PDF p. 9, embedded local stress table; also reproduced in Doc2.docx image11.png",
     "ply_nx": "Kaw supplied PDF p. 9", "ply_share": "Kaw supplied PDF p. 10"
   }
 }

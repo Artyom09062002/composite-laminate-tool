@@ -183,7 +183,21 @@ The source prints `[σ1, σ2, τ12]ᵀ = [T][σx, σy, τxy]ᵀ` using the same 
 [σ1, σ2, τ12]ᵀ = [−2.043 × 10^7, −4.388 × 10^6, 7.944 × 10^6]ᵀ
 ```
 
-No top/middle/bottom local stress table is visible on p. 8: the page ends after the line introducing that table. Its values are **NOT REPORTED** in the provided PDF pages.
+The table introduced at the end of p. 8 appears as an embedded image at the top of PDF p. 9. It was missed in the initial text-only extraction of that page and was subsequently read visually during presentation preparation.
+
+Top/middle/bottom local stress table (PDF p. 9; stresses in Pa):
+
+| Ply | Angle | Position | σ1 | σ2 | τ12 |
+|---:|:---:|:---|---:|---:|---:|
+| 1 | 30° | Top | `−1.438(10^7)` | `−1.770(10^7)` | `−1.831(10^7)` |
+| 1 | 30° | Middle | `−6.690(10^6)` | `−1.284(10^7)` | `−1.249(10^7)` |
+| 1 | 30° | Bottom | `9.952(10^5)` | `−7.986(10^6)` | `−6.659(10^6)` |
+| 2 | −45° | Top | `−2.043(10^7)` | `−4.388(10^6)` | `7.944(10^6)` |
+| 2 | −45° | Middle | `−1.302(10^7)` | `5.146(10^5)` | `2.135(10^6)` |
+| 2 | −45° | Bottom | `−5.612(10^6)` | `5.418(10^6)` | `−3.675(10^6)` |
+| 3 | −60° | Top | `4.763(10^6)` | `3.676(10^6)` | `−4.993(10^6)` |
+| 3 | −60° | Middle | `2.610(10^7)` | `6.240(10^6)` | `−1.082(10^7)` |
+| 3 | −60° | Bottom | `4.744(10^7)` | `8.805(10^6)` | `−1.665(10^7)` |
 
 ## Load carried by each ply (PDF p. 9-10)
 
@@ -204,4 +218,4 @@ The printed percentage formula is `Nₓᵏ% = Nₓᵏ/Nx × 100%` (p. 10). Print
 
 - Pages 5-8 were rendered and visually inspected. The tables above were transcribed from their rendered images.
 - The p. 4 expanded A/B/D arithmetic is horizontally clipped at the right edge, as described above; final A/B/D matrix values are readable.
-- The local stress table is announced at the bottom of p. 8 but is absent from the supplied document; no values are visible to transcribe.
+- Correction after visual inspection of p. 9: the local stress table is present there as an image; the initial assertion that it was absent was incorrect. Doc2 image11.png reproduces the same table.

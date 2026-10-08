@@ -63,7 +63,7 @@ Reproduce the end-of-task thermal PDF with `python reports/make_report_c5.py` (e
 
 The Response tab integrates global Nx, Ny and Nxy through each ply exactly, including curvature effects; zero applied components have n/a shares. The Verification tab compares fixed [30/-45/-60] glass/epoxy source inputs with fresh Qbar/ABD, midplane, local strain/stress and ply-force results at the same numeric z. Source Top corresponds to app Bottom in this algebraic comparison; engineering shear and app conventions are unchanged.
 
-Sources and precision notes: `verification/VERIFY_KAW_4_3.md`, `verification/KAW_SOURCE_TRANSCRIPTION.md` and `verification/VERIFY_DOC2_COMPARISON.md`. The full local stress table is from the supplied Doc2 image; its original publication page is NOT REPORTED. `python verification/verify_kaw_vessel.py` reproduces the PDF check and app-default cylinder arithmetic. [Russian pressure-vessel guide](docs/PRESSURE_VESSEL_EXPLAINED_RU.md) explains the tab; `verification/VERIFY_VESSEL_EXAMPLE.md` reproduces Roylance's equilibrium angle and explicitly leaves pressure/burst validation unresolved.
+Sources and precision notes: `verification/VERIFY_KAW_4_3.md`, `verification/KAW_SOURCE_TRANSCRIPTION.md` and `verification/VERIFY_DOC2_COMPARISON.md`. The full local stress table is an embedded image on page 9 of the supplied Kaw PDF, also reproduced in Doc2. `python verification/verify_kaw_vessel.py` reproduces the PDF check and app-default cylinder arithmetic. [Russian pressure-vessel guide](docs/PRESSURE_VESSEL_EXPLAINED_RU.md) explains the tab; `verification/VERIFY_VESSEL_EXAMPLE.md` reproduces Roylance's equilibrium angle and explicitly leaves pressure/burst validation unresolved.
 
 ## Refinement v4
 
