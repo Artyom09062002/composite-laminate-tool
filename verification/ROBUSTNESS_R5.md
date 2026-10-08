@@ -10,6 +10,6 @@ Confirmed fixes:
 
 Verified existing behavior: empty stack rejection, exactly 100 plies accepted, >100 rejected including after symmetric expansion, one-ply finite stiffness, missing angle/thickness rejection, all nonfinite angle/thickness values rejected. Tests compare extreme-angle stiffness against independently reduced finite-angle input, and preserve the standard [0/45/-45/90]s sequence.
 
-Focused verification: `.venv\Scripts\python.exe -m unittest discover -s tests -p test_refine_inputs.py -v`: 8/8 passing (0.053 s). Full verification: `.venv\Scripts\python.exe -m unittest discover -s tests -v`: 161/161 passing, zero skipped (27.772 s); captured in verification/r5_test_run.log. This includes the unchanged v3 snapshot regression.
+Focused verification: `.venv\Scripts\python.exe -m unittest discover -s tests -p test_refine_inputs.py -v`: 8/8 passing (0.053 s). Full verification: `.venv\Scripts\python.exe -m unittest discover -s tests -v`: 161/161 passing, zero skipped (27.772 s). The historical full log is kept locally rather than in the public repository. This includes the unchanged v3 snapshot regression.
 
 UI integration: existing app parser/editor handlers catch ValueError. No UI source changes required for these boundaries. Optional material blank defaults remain intentional, rather than silently deleting a ply. No dependencies, new mechanics features or snapshot regeneration.

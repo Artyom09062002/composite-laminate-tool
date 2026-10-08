@@ -1,5 +1,11 @@
 # STATE (v4 refinement)
 
+## Public repository file audit — 2026-10-08
+
+- Reviewed the 109 tracked files and removed seven redundant/generated files from the public tree: the GitHub copy of the presentation (the user supplied a separate OneDrive link), three saved `output/pdf/` examples, two full test logs and `verification/benchmark_results.json`. Their local copies remain; `.gitignore` prevents accidental re-addition.
+- Retained the app, fonts, cited material/validation data, tests, reference comparisons, the runtime-read `verification/qa_results.json`, and report deliverables. The four source documents in `verification/sources/` remain untracked and ignored. Replaced a local user-profile path in the public Kaw transcription/review.
+- No mechanics or UI source was changed. Full suite before cleanup: 175 tests, OK (152.916 s). Full suite after cleanup: 175 tests, OK (152.466 s).
+
 ## Primary-source correction during presentation preparation — 2026-10-08
 
 - Visual rereading of the supplied Kaw PDF page 9 found the full local stress table as an embedded image. The earlier claims that this table was absent and its page was NOT REPORTED were incorrect; text extraction had omitted the image. Doc2 image11.png reproduces the same table.

@@ -1,6 +1,6 @@
 # Section 4.3 worked example: source transcription
 
-Source: `C:\Users\artyo\Downloads\Section4_3_worked_out_example_PPT.pdf` (10 PDF pages). This is a literal transcription of printed inputs and results; no values have been recalculated. Scientific notation follows the source's printed mantissa and exponent. PDF page numbers below refer to the 1-based page index.
+Source: the supplied `Section4_3_worked_out_example_PPT.pdf` (10 PDF pages; kept outside Git). This is a literal transcription of printed inputs and results; no values have been recalculated. Scientific notation follows the source's printed mantissa and exponent. PDF page numbers below refer to the 1-based page index.
 
 ## Problem and lamina inputs (PDF p. 1-3)
 

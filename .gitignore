@@ -8,3 +8,8 @@ docs/*
 !docs/PRESSURE_VESSEL_EXPLAINED_RU.md
 node_modules/
 verification/sources/
+/presentations/
+/output/pdf/
+/verification/qa_test_log.txt
+/verification/r5_test_run.log
+/verification/benchmark_results.json
