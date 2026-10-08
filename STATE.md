@@ -1,5 +1,11 @@
 # STATE (v4 refinement)
 
+## Cloud publication and hosting choice — 2026-10-08
+
+- User explicitly authorized push after local source exclusion. Pushed ba5496e to origin/main; remote HEAD matched the local commit. The four verification/sources/ documents were not in the pushed tree.
+- Public app https://composite-laminate-tool.streamlit.app/ was asleep; woke it and verified the new sidebar SI labels and Kaw Verification section in the cloud. Switching its reference angle from 30 to -45 refreshed Qbar successfully. Only the verification report download is present in the public section; local PDF/Doc2 source downloads are absent.
+- User chose to retain free Streamlit Community Cloud. This hosting is independent of the PC; per current official documentation it sleeps after 12 hours without traffic and viewers can wake it. No paid host or keepalive automation was created. README explains the public/local URL distinction and links the hosting rule.
+
 ## Local reference documents excluded from Git — 2026-10-08
 
 - At the user's request, the four files in verification/sources/ are kept only on disk: Kaw_section4_3_worked_example.pdf, Roylance_netting.pdf, Roylance_pressure_vessels.pdf and Doc2.docx. The whole directory is ignored and removed from the amended commit's tracked tree; no source document was deleted locally and no push was performed.

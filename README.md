@@ -2,6 +2,8 @@
 
 **Live app:** <https://composite-laminate-tool.streamlit.app/>  ·  **Author:** Artyom
 
+The public app runs on Streamlit Community Cloud, independently of the developer's computer. Opening `localhost` is only for local development; use the public link above when the computer is off. The free service sleeps after 12 hours without visitors; anyone with viewing access can click **Yes, get this app back up!** to wake it. See [Community Cloud hibernation](https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app#app-hibernation). Updates pushed to the deployed GitHub branch are copied to the cloud automatically. The four local reference documents in `verification/sources/` are excluded from Git and public source downloads; numeric verification runs without them.
+
 A Streamlit application that makes Classical Lamination Theory (CLT) visible step by step:
 
 `material → Q → Q̄ → stacking sequence → ABD → mid-plane strain and curvature → ply stresses → first-ply failure (Maximum Stress, Tsai–Wu, Hashin) → progressive failure to the last ply`
